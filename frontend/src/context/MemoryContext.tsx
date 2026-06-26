@@ -46,10 +46,7 @@ const MemoryContext = createContext<MemoryContextValue | null>(null);
 export function MemoryProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<AppData>(loadData);
 
-  const save = useCallback((next: AppData) => {
-    setData(next);
-    persist(next);
-  }, []);
+  
 
   const updateQueueItem = useCallback(
     (id: string, patch: Partial<RevisionQueueItem>) => {

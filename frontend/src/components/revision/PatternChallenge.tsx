@@ -14,7 +14,7 @@ export default function PatternChallenge() {
 
   const progress = Math.min(data.dailyChallengeIndex + 1, 5);
 
-  const handleSelect = (id: string, text: string) => {
+  const handleSelect = (text: string) => {
     setSelected(text);
     setRevealed(true);
   };
@@ -40,7 +40,7 @@ export default function PatternChallenge() {
           <button
             key={opt.id}
             type="button"
-            onClick={() => handleSelect(opt.id, opt.text)}
+            onClick={() => handleSelect( opt.text)}
             className={`${
               selected === opt.text ? "selected" : ""
             } ${

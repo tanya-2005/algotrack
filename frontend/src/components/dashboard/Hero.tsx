@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { TrendingUp } from "lucide-react";
+
 
 type HeroProps = {
   onLogQuestion: () => void;
