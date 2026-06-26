@@ -1,0 +1,174 @@
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  background:
+    radial-gradient(
+      circle at top,
+      #172554 0%,
+      #050816 45%,
+      #02030a 100%
+    );
+
+  padding: 24px;
+}
+
+.login-card {
+  width: 430px;
+
+  position: relative;
+  top: -20px; /* move slightly upward or remove */
+
+  background: rgba(15, 23, 42, 0.8);
+
+  backdrop-filter: blur(20px);
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+
+  border-radius: 24px;
+
+  padding: 40px;
+
+  box-shadow:
+    0 0 50px rgba(99, 102, 241, 0.15);
+}
+
+.login-title {
+  color: white;
+
+  font-size: 42px;
+
+  font-weight: 700;
+
+  margin-bottom: 8px;
+}
+
+.login-subtitle {
+  color: #94a3b8;
+
+  margin-bottom: 32px;
+
+  font-size: 16px;
+}
+
+.login-input {
+  width: 100%;
+
+  padding: 14px;
+
+  margin-bottom: 14px;
+
+  border-radius: 12px;
+
+  border: 1px solid #334155;
+
+  background: #0f172a;
+
+  color: white;
+
+  font-size: 15px;
+
+  outline: none;
+
+  transition: 0.3s;
+}
+
+.login-input:focus {
+  border-color: #6366f1;
+
+  box-shadow:
+    0 0 15px rgba(99, 102, 241, 0.25);
+}
+
+.login-btn {
+  width: 100%;
+
+  padding: 14px;
+
+  border: none;
+
+  border-radius: 12px;
+
+  cursor: pointer;
+
+  color: white;
+
+  font-size: 16px;
+
+  font-weight: 600;
+
+  margin-top: 8px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #6366f1,
+      #8b5cf6
+    );
+
+  transition: 0.3s;
+}
+
+.login-btn:hover {
+  transform: translateY(-2px);
+}
+
+.signup-btn {
+  width: 100%;
+
+  padding: 14px;
+
+  margin-top: 12px;
+
+  border-radius: 12px;
+
+  cursor: pointer;
+
+  background: transparent;
+
+  border: 1px solid #334155;
+
+  color: white;
+
+  transition: 0.3s;
+}
+
+.signup-btn:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.divider {
+  height: 1px;
+
+  background: #1e293b;
+
+  margin: 24px 0;
+}
+
+.demo-btn {
+  width: 100%;
+
+  padding: 14px;
+
+  border: none;
+
+  border-radius: 12px;
+
+  cursor: pointer;
+
+  color: white;
+
+  font-size: 16px;
+
+  font-weight: 600;
+
+  background: #1e293b;
+
+  transition: 0.3s;
+}
+
+.demo-btn:hover {
+  background: #273449;
+}
