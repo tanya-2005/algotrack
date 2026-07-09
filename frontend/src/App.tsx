@@ -41,6 +41,11 @@ function App() {
   }, []);
 
   if (location.pathname === "/") {
+    // An already-logged-in user landing back on "/" (e.g. clicking the
+    // sidebar logo) should stay in the app, not see the Login form again.
+    if (authChecked && isAuthenticated) {
+      return <Navigate to="/dashboard" replace />;
+    }
     return <Login />;
   }
 

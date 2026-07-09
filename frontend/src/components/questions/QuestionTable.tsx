@@ -15,17 +15,29 @@ function QuestionTable({
   const [questions, setQuestions] = useState<any[]>([]);
   const [selectedQuestion, setSelectedQuestion] =
     useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     loadQuestions();
   }, []);
 
-  async function loadQuestions() {
+  async function loadQuestions(retryCount = 0) {
     try {
+      setLoadError(false);
       const data = await getQuestions();
       setQuestions([...(data || [])]);
+      setLoading(false);
     } catch (error) {
       console.error(error);
+      // One automatic retry covers a transient network hiccup (e.g. a
+      // brief DNS/connection blip) without the user needing to refresh.
+      if (retryCount < 1) {
+        setTimeout(() => loadQuestions(retryCount + 1), 800);
+        return;
+      }
+      setLoadError(true);
+      setLoading(false);
     }
   }
 
@@ -55,6 +67,30 @@ const matchesDifficulty =
           <span>Topic</span>
           <span>Difficulty</span>
         </div>
+
+        {loadError && (
+          <div className="question-row" style={{ cursor: "default" }}>
+            <span>
+              Couldn't load your questions. Check your connection and try
+              again.
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setLoading(true);
+                loadQuestions();
+              }}
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {!loading && !loadError && filteredQuestions.length === 0 && (
+          <div className="question-row" style={{ cursor: "default" }}>
+            <span>No questions logged yet.</span>
+          </div>
+        )}
 
         {filteredQuestions.map((q) => (
           <div
@@ -95,7 +131,7 @@ const matchesDifficulty =
 
       <ReflectionPanel
         question={selectedQuestion}
-        onSave={loadQuestions}
+        onSave={() => loadQuestions()}
         onClose={() => setSelectedQuestion(null)}
       />
     </>

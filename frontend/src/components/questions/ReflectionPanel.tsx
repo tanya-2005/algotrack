@@ -88,8 +88,9 @@ export default function ReflectionPanel({
 
   const handleSave = async () => {
     const {
-      data: { user },
-    } = await supabase.auth.getUser();
+      data: { session },
+    } = await supabase.auth.getSession();
+    const user = session?.user;
 
     if (!user) {
       alert("Please login first");

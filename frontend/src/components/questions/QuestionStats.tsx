@@ -20,9 +20,18 @@ function QuestionStats({
     loadStats();
   }, [refreshKey]);
 
-  async function loadStats() {
-    const data = await getQuestionStats();
-    setStats(data);
+  async function loadStats(retryCount = 0) {
+    try {
+      const data = await getQuestionStats();
+      setStats(data);
+    } catch (error) {
+      console.error(error);
+      // One automatic retry covers a transient network hiccup (e.g. a
+      // brief DNS/connection blip) without the user needing to refresh.
+      if (retryCount < 1) {
+        setTimeout(() => loadStats(retryCount + 1), 800);
+      }
+    }
   }
 
   return (

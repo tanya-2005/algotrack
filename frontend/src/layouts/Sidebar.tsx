@@ -26,8 +26,8 @@ function Sidebar() {
 
     let mounted = true;
 
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (mounted) setEmail(user?.email ?? null);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (mounted) setEmail(session?.user?.email ?? null);
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange(
