@@ -1,12 +1,9 @@
 import "../styles/login.css";
-import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { resetPassword, signIn, signUp } from "../services/auth";
-import { enableDemoMode } from "../lib/demoMode";
+import { disableDemoMode, enableDemoMode } from "../lib/demoMode";
 
 export default function Login() {
-  const navigate = useNavigate();
-
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,7 +19,11 @@ export default function Login() {
       return;
     }
 
-    navigate("/dashboard");
+    // Full navigation (not React Router's navigate) so MemoryProvider/App
+    // remount fresh and correctly pick up the real session instead of
+    // whatever stale demo/auth state was already in memory for this tab.
+    disableDemoMode();
+    window.location.href = "/dashboard";
   };
 
   const handleSignup = async () => {
@@ -31,7 +32,7 @@ export default function Login() {
       return;
     }
 
-    const { error } = await signUp(
+    const { data, error } = await signUp(
       email,
       password,
       name.trim()
@@ -42,7 +43,17 @@ export default function Login() {
       return;
     }
 
-    alert("Account Created!");
+    disableDemoMode();
+
+    // Email confirmation is off on this project, so signUp() already
+    // returns an active session - take the user straight to their
+    // dashboard instead of making them log in again immediately after.
+    if (data.session) {
+      window.location.href = "/dashboard";
+      return;
+    }
+
+    alert("Account created! Check your email to confirm, then log in.");
   };
 
   const handleForgotPassword = async () => {
@@ -130,7 +141,7 @@ export default function Login() {
           className="demo-btn"
           onClick={() => {
             enableDemoMode();
-            navigate("/dashboard");
+            window.location.href = "/dashboard";
           }}
         >
           🚀 Explore Demo

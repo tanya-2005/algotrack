@@ -3,7 +3,7 @@ import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 
 import Sidebar from "./layouts/Sidebar";
 import { supabase } from "./lib/supabase";
-import { isDemoMode } from "./lib/demoMode";
+import { disableDemoMode, isDemoMode } from "./lib/demoMode";
 
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -23,12 +23,16 @@ function App() {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!mounted) return;
+      // A real session always wins over a stale demo flag left in this
+      // tab's sessionStorage from an earlier "Explore Demo" click.
+      if (session) disableDemoMode();
       setIsAuthenticated(!!session);
       setAuthChecked(true);
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
+        if (session) disableDemoMode();
         setIsAuthenticated(!!session);
       }
     );

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { NavLink, Link, useNavigate } from "react-router-dom";
+import { NavLink, Link } from "react-router-dom";
 import {
   LayoutDashboard,
   Code2,
@@ -18,7 +18,6 @@ import { getDisplayName } from "../lib/userDisplay";
 
 function Sidebar() {
   const { theme, setTheme } = useTheme();
-  const navigate = useNavigate();
   const [name, setName] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
   const demoMode = isDemoMode();
@@ -52,8 +51,12 @@ function Sidebar() {
       disableDemoMode();
     } else {
       await signOut();
+      disableDemoMode();
     }
-    navigate("/");
+    // Full navigation (not React Router's navigate) so MemoryProvider/App
+    // remount fresh instead of continuing to show this session's now-stale
+    // data.
+    window.location.href = "/";
   };
 
   const displayName = demoMode ? "Demo User" : name || "Loading...";
