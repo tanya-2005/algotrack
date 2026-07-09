@@ -141,26 +141,31 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
   // swap the demo/seed questions & patterns for their real Supabase data.
   // Demo Mode never touches Supabase and keeps its existing seed-driven
   // behavior, fully isolated under its own storage key.
+  //
+  // This re-runs on every auth change (not just once at mount) and tracks
+  // the currently-loaded user id, so if the session changes underneath
+  // this tab - a different account signing in, or signing out - the data
+  // is re-fetched (or cleared) for whoever is actually authenticated now,
+  // instead of continuing to show a previous account's stale data.
   useEffect(() => {
     if (isDemoMode()) return;
 
     let cancelled = false;
+    let currentUserId: string | null = null;
 
-    (async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const user = session?.user;
-
-      if (cancelled || !user) return;
-
-      const key = storageKeyForUser(user.id);
+    const loadForUser = async (userId: string) => {
+      currentUserId = userId;
+      const key = storageKeyForUser(userId);
       storageKeyRef.current = key;
       const local = loadLocalOnlyState(key, emptyLocalOnlyState());
 
       try {
         const real = await fetchRealMemoryData();
-        if (cancelled || !real) return;
+        if (cancelled) return;
+        // The session may have changed again while this fetch was in
+        // flight - don't apply a stale response for a user who is no
+        // longer the current one.
+        if (!real || currentUserId !== userId) return;
         setData((prev) => ({
           ...prev,
           ...local,
@@ -174,10 +179,35 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         console.error("Failed to load real memory data:", err);
       }
-    })();
+    };
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (cancelled || !session?.user) return;
+      loadForUser(session.user.id);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (cancelled) return;
+
+        if (session?.user && session.user.id !== currentUserId) {
+          loadForUser(session.user.id);
+        } else if (!session && currentUserId !== null) {
+          currentUserId = null;
+          storageKeyRef.current = "";
+          setData({
+            questions: [],
+            patterns: [],
+            revisionQueue: [],
+            ...emptyLocalOnlyState(),
+          });
+        }
+      }
+    );
 
     return () => {
       cancelled = true;
+      listener.subscription.unsubscribe();
     };
   }, []);
 
