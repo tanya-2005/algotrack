@@ -83,7 +83,7 @@
 
   padding: 18px 22px;
 
-  color: white;
+  color: var(--text);
 
   font-size: 15px;
 
@@ -505,7 +505,7 @@
 }
 
 .question-meta {
-  color: #8d95ab;
+  color: var(--text-secondary);
   font-size: 15px;
 }
 
@@ -524,14 +524,14 @@
   border-radius: 50%;
   border: none;
 
-  background: #151c2d;
-  color: white;
+  background: var(--card-hover);
+  color: var(--text);
 
   cursor: pointer;
 }
 
 .close-btn:hover {
-  background: #212c47;
+  background: rgba(124, 140, 255, 0.15);
 }
 
 .save-btn {
@@ -576,7 +576,7 @@
 
 .reflection-section small {
   display: block;
-  color: #8d95ab;
+  color: var(--text-secondary);
   margin-top: 6px;
 }
 
@@ -589,13 +589,13 @@
 .reflection-section input.question-name-input {
   width: 100%;
 
-  background: #101726;
+  background: var(--input-bg);
 
-  border: 1px solid #1a2235;
+  border: 1px solid var(--border);
 
   border-radius: 16px;
 
-  color: white;
+  color: var(--text);
 
   font-size: 15px;
 
@@ -618,7 +618,7 @@
 .reflection-section textarea:focus,
 .reflection-section select:focus,
 .reflection-section input.question-name-input:focus {
-  border-color: #6d7cff;
+  border-color: var(--primary);
 }
 
 /* ==========================
@@ -633,7 +633,7 @@
 
 .star {
   font-size: 34px;
-  color: #3c4357;
+  color: var(--border);
   cursor: pointer;
   transition: .15s;
 }
@@ -643,7 +643,7 @@
 }
 
 .star.active {
-  color: #ffc83d;
+  color: var(--warning);
 }
 
 /* ==========================
@@ -655,7 +655,7 @@
 }
 
 .reflection-panel::-webkit-scrollbar-thumb {
-  background: #27314b;
+  background: var(--border);
   border-radius: 999px;
 }
 
@@ -685,8 +685,8 @@
   cursor:pointer;
   padding:10px 18px;
   border-radius:999px;
-  background:#111a2e;
-  color:#8f97b2;
+  background:var(--card-hover);
+  color:var(--text-secondary);
   font-weight:600;
   transition:.2s;
 }
@@ -697,24 +697,24 @@
 
 .difficulty-pill.active.easy{
   background:rgba(52,211,153,.15);
-  color:#34d399;
-  border:1px solid #34d399;
+  color:var(--success);
+  border:1px solid var(--success);
 }
 
 .difficulty-pill.active.medium{
   background:rgba(251,191,36,.15);
-  color:#fbbf24;
-  border:1px solid #fbbf24;
+  color:var(--warning);
+  border:1px solid var(--warning);
 }
 
 .difficulty-pill.active.hard{
   background:rgba(248,113,113,.15);
-  color:#f87171;
-  border:1px solid #f87171;
+  color:var(--danger);
+  border:1px solid var(--danger);
 }
 
 .delete-btn {
-  background: #dc2626;
+  background: var(--danger);
   color: white;
   border: none;
   padding: 8px 16px;

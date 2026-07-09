@@ -11,7 +11,7 @@ const PatternNotes = ({ summary }: PatternNotesProps) => {
         <h2>Your Learning Summary</h2>
       </div>
 
-      <div className="note-card">
+      <div className="note-block">
         {summary?.memorySummary?.progress ??
           "Generate an AI summary to see your personalized learning journey."}
       </div>
@@ -20,7 +20,7 @@ const PatternNotes = ({ summary }: PatternNotesProps) => {
         Next Focus
       </h3>
 
-      <div className="note-card">
+      <div className="note-block">
         
           {summary?.memorySummary?.nextFocus ? (
   <ul className="focus-list">

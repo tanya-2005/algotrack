@@ -19,8 +19,8 @@
   
   /* Compact paddings to ensure it fits flawlessly next to the left sidebar */
   padding: 12px 20px 16px 20px;
-  color: #e2e8f0;
-  background-color: transparent;     
+  color: var(--text);
+  background-color: transparent;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   overflow: hidden;                  /* Prevents the outer workspace from scrolling */
 }
@@ -31,16 +31,16 @@
 .chat-page {
   display: grid;
   grid-template-rows: 64px 1fr auto; /* Tailored header size to maximize message track height */
-  
+
   width: 100%;
   height: 100%;
   min-height: 0;                     /* Crucial fix to allow child components to compress cleanly */
-  
-  background: linear-gradient(180deg, #0a0d12, #080b0f);
-  border: 1px solid #1c222c;
+
+  background: var(--card);
+  border: 1px solid var(--border);
   border-radius: 20px;
   overflow: hidden;                  /* Enforces a hard crop on top/bottom contents */
-  box-shadow: 0 20px 55px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-card);
 }
 
 /* ==========================================================================
@@ -51,8 +51,8 @@
   justify-content: space-between;
   align-items: center;
   padding: 0 24px;
-  border-bottom: 1px solid #181d25;
-  background: rgba(13, 16, 22, 0.88);
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
 }
 
 .chat-header-left {
@@ -68,7 +68,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 10px;
-  color: #94a7ff;
+  color: var(--primary);
   background: rgba(79, 124, 255, 0.09);
   border: 1px solid rgba(79, 124, 255, 0.15);
 }
@@ -77,12 +77,12 @@
   margin: 0;
   font-size: 15px;
   font-weight: 600;
-  color: #bbc2ce;
+  color: var(--text);
 }
 
 .chat-header p {
   margin: 2px 0 0;
-  color: #515a6b;
+  color: var(--text-secondary);
   font-size: 11px;
 }
 
@@ -94,7 +94,7 @@
   border-radius: 10px;
   border: 1px solid rgba(16, 185, 129, 0.15);
   background: rgba(16, 185, 129, 0.055);
-  color: #43d39e;
+  color: var(--success);
   font-size: 11px;
   font-weight: 600;
 }
@@ -135,15 +135,15 @@
 }
 
 .coach-row .message-avatar {
-  color: #9aadff;
+  color: var(--primary);
   background: rgba(79, 124, 255, 0.1);
   border: 1px solid rgba(79, 124, 255, 0.15);
 }
 
 .user-row .message-avatar {
-  color: #b7bfcc;
-  background: #151920;
-  border: 1px solid #242a35;
+  color: var(--text-secondary);
+  background: var(--card-hover);
+  border: 1px solid var(--border);
   order: 2;                          /* Places user icon to the right side safely */
 }
 
@@ -155,16 +155,16 @@
 }
 
 .coach-row .message-bubble {
-  color: #aeb6c5;
-  background: #0f1319;
-  border: 1px solid #1c222b;
+  color: var(--text-secondary);
+  background: var(--card-hover);
+  border: 1px solid var(--border);
   border-radius: 4px 14px 14px 14px;
 }
 
 .user-row .message-bubble {
-  color: #d0d5df;
-  background: linear-gradient(135deg, #161c2d, #111725);
-  border: 1px solid #27324b;
+  color: var(--text);
+  background: var(--card-hover);
+  border: 1px solid var(--border);
   border-radius: 14px 4px 14px 14px;
   order: 1;                          /* Content displays left of avatar */
   margin-left: auto;
@@ -174,9 +174,9 @@
    FOOTER COMPOSER & ACTION CONTROLS
    ========================================================================== */
 .chat-input-wrapper {
-  border-top: 1px solid #181d25;
+  border-top: 1px solid var(--border);
   padding: 16px min(50px, 5vw) 18px;
-  background: #090c10;
+  background: var(--card);
 }
 
 /* SUGGESTED PILLS */
@@ -188,9 +188,9 @@
 }
 
 .suggestions button {
-  border: 1px solid #1b222c;
-  background: #0d1117;
-  color: #707a8c;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text-secondary);
   padding: 6px 12px;
   font-size: 11px;
   font-weight: 500;
@@ -200,9 +200,9 @@
 }
 
 .suggestions button:hover {
-  color: #9da8ba;
-  border-color: #303a50;
-  background: #121820;
+  color: var(--text);
+  border-color: var(--primary);
+  background: var(--card-hover);
 }
 
 /* ACTION INPUT DECK */
@@ -211,14 +211,14 @@
   align-items: flex-end;
   gap: 12px;
   padding: 8px 12px;
-  border: 1px solid #252d3a;
+  border: 1px solid var(--border);
   border-radius: 14px;
-  background: #0e1218;
+  background: var(--input-bg);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .chat-input:focus-within {
-  border-color: #405078;
+  border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(79, 124, 255, 0.05);
 }
 
@@ -230,7 +230,7 @@
   max-height: 90px;          /* Clean scaling boundary to protect footer footprint */
   border: none;
   background: transparent;
-  color: #e2e6ed;
+  color: var(--text);
   padding: 8px 2px;
   font-size: 14px;
   line-height: 1.5;
@@ -242,7 +242,7 @@
 }
 
 .chat-input textarea::placeholder {
-  color: #4e5869;
+  color: var(--text-secondary);
 }
 
 .chat-input button {
@@ -253,8 +253,8 @@
   justify-content: center;
   border: none;
   border-radius: 8px;
-  background: #dfe5f5;
-  color: #080a0e;
+  background: var(--primary);
+  color: #ffffff;
   cursor: pointer;
   transition: background 0.2s, transform 0.1s;
   flex-shrink: 0;
@@ -262,12 +262,12 @@
 }
 
 .chat-input button:hover:not(:disabled) {
-  background: #ffffff;
+  background: var(--accent-light);
 }
 
 .chat-input button:disabled {
-  color: #4d5666;
-  background: #202630;
+  color: var(--text-secondary);
+  background: var(--card-hover);
   cursor: not-allowed;
 }
 
@@ -283,12 +283,12 @@
 }
 
 .chat-messages::-webkit-scrollbar-thumb {
-  background: #202734;
+  background: var(--border);
   border-radius: 10px;
 }
 
 .chat-messages::-webkit-scrollbar-thumb:hover {
-  background: #2e394e;
+  background: var(--text-secondary);
 }
 
 /* Coach page layout */

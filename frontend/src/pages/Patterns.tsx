@@ -1,5 +1,5 @@
 import { supabase } from "../lib/supabase";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import type { PatternSort } from "../lib/types";
 import { useMemory } from "../context/MemoryContext";
@@ -10,23 +10,19 @@ import "../styles/patterns.css";
 function Patterns() {
   const { data: memoryData } = useMemory();
   const demoMode = isDemoMode();
+  const demoProblems = useMemo(
+    () => memoryData.questions.map(questionToRow),
+    [memoryData.questions]
+  );
   const [problems, setProblems] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!demoMode);
+  const [loadError, setLoadError] = useState(false);
 
   const [sort, setSort] =
     useState<PatternSort>("needs-revision");
 
-  useEffect(() => {
-    if (demoMode) {
-      setProblems(memoryData.questions.map(questionToRow));
-      setLoading(false);
-      return;
-    }
-
-    fetchProblems();
-  }, [demoMode, memoryData.questions]);
-
-  const fetchProblems = async () => {
+  const fetchProblems = useCallback(async () => {
+    setLoadError(false);
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -44,18 +40,25 @@ function Patterns() {
 
     if (error) {
       console.error(error);
+      setLoadError(true);
       setLoading(false);
       return;
     }
 
     setProblems(data || []);
     setLoading(false);
-  };
+  }, []);
+
+  useEffect(() => {
+    if (demoMode) return;
+
+    fetchProblems();
+  }, [demoMode, fetchProblems]);
 
   const patterns = useMemo(() => {
     const grouped: any = {};
 
-    problems.forEach((problem) => {
+    (demoMode ? demoProblems : problems).forEach((problem) => {
       const name = problem.topic;
 
       if (!name) return;
@@ -71,13 +74,51 @@ function Patterns() {
       grouped[name].questions.push(problem);
     });
 
-    return Object.values(grouped);
-  }, [problems]);
+    const groups = Object.values(grouped) as any[];
+
+    groups.forEach((pattern) => {
+      pattern.avgConfidence =
+        pattern.questions.reduce(
+          (sum: number, q: any) => sum + (q.confidence || 0),
+          0
+        ) / pattern.questions.length;
+    });
+
+    if (sort === "most-solved") {
+      groups.sort((a, b) => b.questions.length - a.questions.length);
+    } else if (sort === "highest-confidence") {
+      groups.sort((a, b) => b.avgConfidence - a.avgConfidence);
+    } else {
+      // needs-revision: lowest average confidence first
+      groups.sort((a, b) => a.avgConfidence - b.avgConfidence);
+    }
+
+    return groups;
+  }, [demoMode, demoProblems, problems, sort]);
 
   if (loading) {
     return (
       <div className="pattern-page">
         <h2>Loading...</h2>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="pattern-page">
+        <h2>Couldn't load your patterns.</h2>
+        <p>Check your connection and try again.</p>
+        <button
+          type="button"
+          className="rev-primary-btn"
+          onClick={() => {
+            setLoading(true);
+            fetchProblems();
+          }}
+        >
+          Retry
+        </button>
       </div>
     );
   }
@@ -123,12 +164,7 @@ function Patterns() {
 
       <div className="patterns-grid">
         {patterns.map((pattern: any) => {
-          const avgConfidence =
-            pattern.questions.reduce(
-              (sum: number, q: any) =>
-                sum + (q.confidence || 0),
-              0
-            ) / pattern.questions.length;
+          const avgConfidence = pattern.avgConfidence;
 
           const lastSeen =
             pattern.questions.sort(

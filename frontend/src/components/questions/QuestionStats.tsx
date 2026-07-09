@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getQuestionStats } from "../../services/statsService";
 import { useMemory } from "../../context/MemoryContext";
 import { isDemoMode } from "../../lib/demoMode";
@@ -22,36 +22,26 @@ function QuestionStats({
   });
   const mountedRef = useRef(true);
 
-  useEffect(() => {
-    mountedRef.current = true;
+  const demoStats = useMemo(() => {
+    const questions = memoryData.questions;
+    const totalPatterns = new Set(questions.map((q) => q.topic)).size;
+    const avgConfidence =
+      questions.length > 0
+        ? questions.reduce((sum, q) => sum + q.confidence, 0) / questions.length
+        : 0;
+    const dueToday =
+      getDueTodayQuestions(questions).length +
+      getOverdueQuestions(questions).length;
 
-    if (demoMode) {
-      const questions = memoryData.questions;
-      const totalPatterns = new Set(questions.map((q) => q.topic)).size;
-      const avgConfidence =
-        questions.length > 0
-          ? questions.reduce((sum, q) => sum + q.confidence, 0) / questions.length
-          : 0;
-      const dueToday =
-        getDueTodayQuestions(questions).length +
-        getOverdueQuestions(questions).length;
-
-      setStats({
-        totalQuestions: questions.length,
-        totalPatterns,
-        retention: Math.round((avgConfidence / 5) * 100),
-        dueToday,
-      });
-      return;
-    }
-
-    loadStats();
-    return () => {
-      mountedRef.current = false;
+    return {
+      totalQuestions: questions.length,
+      totalPatterns,
+      retention: Math.round((avgConfidence / 5) * 100),
+      dueToday,
     };
-  }, [refreshKey, demoMode, memoryData.questions]);
+  }, [memoryData.questions]);
 
-  async function loadStats(retryCount = 0) {
+  const loadStats = useCallback(async (retryCount = 0) => {
     try {
       const data = await getQuestionStats();
       if (!mountedRef.current) return;
@@ -63,18 +53,34 @@ function QuestionStats({
       // brief DNS/connection blip) without the user needing to refresh.
       if (retryCount < 1) {
         setTimeout(() => {
+          // Safe self-reference: this only runs async, after `loadStats`
+          // has already been fully assigned by useCallback.
+          // eslint-disable-next-line react-hooks/immutability
           if (mountedRef.current) loadStats(retryCount + 1);
         }, 800);
       }
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    mountedRef.current = true;
+
+    if (demoMode) return;
+
+    loadStats();
+    return () => {
+      mountedRef.current = false;
+    };
+  }, [refreshKey, demoMode, loadStats]);
+
+  const display = demoMode ? demoStats : stats;
 
   return (
     <div className="question-stats">
 
       <div className="stat-pill questions">
         <span className="stat-number">
-          {stats.totalQuestions}
+          {display.totalQuestions}
         </span>
 
         <span className="stat-label">
@@ -84,7 +90,7 @@ function QuestionStats({
 
       <div className="stat-pill patterns">
         <span className="stat-number">
-          {stats.totalPatterns}
+          {display.totalPatterns}
         </span>
 
         <span className="stat-label">
@@ -94,7 +100,7 @@ function QuestionStats({
 
       <div className="stat-pill retention">
         <span className="stat-number">
-          {stats.retention}%
+          {display.retention}%
         </span>
 
         <span className="stat-label">
@@ -104,7 +110,7 @@ function QuestionStats({
 
       <div className="stat-pill due">
         <span className="stat-number">
-          {stats.dueToday}
+          {display.dueToday}
         </span>
 
         <span className="stat-label">

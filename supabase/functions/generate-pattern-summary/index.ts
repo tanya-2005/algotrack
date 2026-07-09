@@ -330,9 +330,6 @@ Return ONLY valid JSON.
 
     const data = await aiResponse.json();
 
-    console.log("OPENROUTER RESPONSE:");
-    console.log(JSON.stringify(data, null, 2));
-
     const content = data?.choices?.[0]?.message?.content;
 
     if (!content) {
@@ -371,9 +368,6 @@ cleaned = cleaned
   .replace(/\\"/g, '"')
   .replace(/\r/g, "")
   .trim();
-
-console.log("CLEANED:");
-console.log(cleaned);
 
 let summary;
 

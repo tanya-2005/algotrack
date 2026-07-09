@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { isDemoMode } from "../../lib/demoMode";
 import { useMemory } from "../../context/MemoryContext";
@@ -76,19 +76,6 @@ export default function ReflectionPanel({
   const [saving, setSaving] = useState(false);
   const { addDemoQuestion, updateDemoQuestion, deleteDemoQuestion } =
     useMemory();
-
-  useEffect(() => {
-    if (!question) return;
-
-    setQuestionName(question.title || "");
-    setDifficulty(question.difficulty || "");
-    setPattern(question.topic || "");
-    setConfidence(question.confidence || 3);
-    setReflection(question.reflection || "");
-    setMistakes(question.mistakes || "");
-    setMemoryTrigger(question.memory_trigger || "");
-    setTimeTaken(question.time_taken || "");
-  }, [question]);
 
   if (!question) return null;
 
@@ -257,7 +244,7 @@ export default function ReflectionPanel({
             {question.id && (
               <button
                 style={{
-                  background: "red",
+                  background: "var(--danger)",
                   color: "white",
                   padding: "10px 20px",
                   border: "none",

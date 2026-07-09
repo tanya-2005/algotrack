@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReflectionPreview from "./ReflectionPreview";
 import ReflectionPanel from "./ReflectionPanel";
 import { getQuestions } from "../../services/questionservice";
@@ -19,29 +19,18 @@ function QuestionTable({
 }: Props) {
   const { data: memoryData } = useMemory();
   const demoMode = isDemoMode();
+  const demoQuestions = useMemo(
+    () => memoryData.questions.map(questionToRow),
+    [memoryData.questions]
+  );
   const [questions, setQuestions] = useState<any[]>([]);
   const [selectedQuestion, setSelectedQuestion] =
     useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!demoMode);
   const [loadError, setLoadError] = useState(false);
   const mountedRef = useRef(true);
 
-  useEffect(() => {
-    mountedRef.current = true;
-
-    if (demoMode) {
-      setQuestions(memoryData.questions.map(questionToRow));
-      setLoading(false);
-      return;
-    }
-
-    loadQuestions();
-    return () => {
-      mountedRef.current = false;
-    };
-  }, [refreshKey, demoMode, memoryData.questions]);
-
-  async function loadQuestions(retryCount = 0) {
+  const loadQuestions = useCallback(async (retryCount = 0) => {
     try {
       setLoadError(false);
       const data = await getQuestions();
@@ -55,6 +44,9 @@ function QuestionTable({
       // brief DNS/connection blip) without the user needing to refresh.
       if (retryCount < 1) {
         setTimeout(() => {
+          // Safe self-reference: this only runs async, after
+          // `loadQuestions` has already been fully assigned by useCallback.
+          // eslint-disable-next-line react-hooks/immutability
           if (mountedRef.current) loadQuestions(retryCount + 1);
         }, 800);
         return;
@@ -62,12 +54,25 @@ function QuestionTable({
       setLoadError(true);
       setLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    mountedRef.current = true;
+
+    if (demoMode) return;
+
+    loadQuestions();
+    return () => {
+      mountedRef.current = false;
+    };
+  }, [refreshKey, demoMode, loadQuestions]);
 
   // Defensive: guarantee at most one row per question id, regardless of
   // what the fetch returned, so a duplicate id can never render twice.
   const uniqueQuestions = Array.from(
-    new Map(questions.map((q) => [q.id, q])).values()
+    new Map(
+      (demoMode ? demoQuestions : questions).map((q) => [q.id, q])
+    ).values()
   );
 
   const filteredQuestions = uniqueQuestions.filter((q) => {
@@ -90,7 +95,7 @@ const matchesDifficulty =
 
   return (
     <>
-      <div className="questions-table">
+      <div className="question-table">
         <div className="table-header">
           <span>Question</span>
           <span>Topic</span>
@@ -138,7 +143,7 @@ const matchesDifficulty =
             </span>
 
             <span
-              className={`difficulty ${q.difficulty}`}
+              className={`difficulty ${(q.difficulty || "").toLowerCase()}`}
             >
               {q.difficulty}
             </span>
@@ -159,6 +164,7 @@ const matchesDifficulty =
       </div>
 
       <ReflectionPanel
+        key={selectedQuestion?.id ?? "none"}
         question={selectedQuestion}
         onSave={async () => {
           // In Demo Mode the useEffect above already reacts to

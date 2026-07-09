@@ -71,7 +71,10 @@ export default function RevisionQueuePanel() {
               <input
                 type="checkbox"
                 checked={item.completed}
-                onChange={() => completeQueueItem(item.id)}
+                disabled={item.completed}
+                onChange={() => {
+                  if (!item.completed) completeQueueItem(item.id);
+                }}
               />
               <span>{item.title}</span>
               <small>

@@ -224,7 +224,7 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
         return next;
       });
     },
-    []
+    [persist]
   );
 
   const skipQueueItem = useCallback(
@@ -366,7 +366,7 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
         return next;
       });
     },
-    []
+    [persist]
   );
 
   const advanceDailyChallenge = useCallback(() => {
@@ -383,7 +383,7 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
       persist(next);
       return next;
     });
-  }, []);
+  }, [persist]);
 
   // Demo Mode only - "Add/Edit/Delete Question" for a real account already
   // goes straight to Supabase via ReflectionPanel and never touches this.

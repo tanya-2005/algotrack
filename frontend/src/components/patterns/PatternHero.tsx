@@ -7,6 +7,7 @@ interface PatternHeroProps {
   lastRevised: string;
   dueQuestions: number;
   status: string;
+  description?: string;
 }
 
 const PatternHero = ({
@@ -16,6 +17,7 @@ const PatternHero = ({
   lastRevised,
   dueQuestions,
   status,
+  description,
 }: PatternHeroProps) => {
   return (
     <div className="hero-v3">
@@ -31,9 +33,10 @@ const PatternHero = ({
           <h1>{name}</h1>
 
           <p className="hero-desc">
-            Efficiently process contiguous arrays and substrings
-            by maintaining a dynamic window instead of repeatedly
-            recalculating information.
+            {description ||
+              `${solvedQuestions} solved question${
+                solvedQuestions === 1 ? "" : "s"
+              } in this pattern.`}
           </p>
 
         </div>

@@ -67,10 +67,16 @@ export default function AIQuizArena({
             {quizReady ? "Regenerate quiz" : "Generate today's quiz"}{" "}
             <ArrowRight size={17} />
           </button>
-          {quizReady && (
+          {quizReady && quiz.length > 0 && (
             <button className="rev-secondary-btn" onClick={onStartQuiz}>
               Start Quiz ({quiz.length} Q)
             </button>
+          )}
+          {quizReady && quiz.length === 0 && (
+            <span className="recall-prompt">
+              Log a few questions with reflections first — the quiz is built
+              from your own solved problems.
+            </span>
           )}
         </div>
       </div>

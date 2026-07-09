@@ -170,14 +170,9 @@ HERO
 ========================= */
 
 .hero-v3{
-  background:
-  linear-gradient(
-    180deg,
-    #0b1120,
-    #090d17
-  );
+  background: var(--card);
 
-  border:1px solid #1e293b;
+  border:1px solid var(--border);
 
   border-radius:28px;
 
@@ -220,7 +215,7 @@ HERO
 }
 
 .hero-label{
-  color:#8b5cf6;
+  color:var(--purple);
 
   font-size:11px;
 
@@ -246,7 +241,7 @@ HERO
 .hero-desc{
   max-width:650px;
 
-  color:#94a3b8;
+  color:var(--text-secondary);
 
   font-size:15px;
 
@@ -260,7 +255,7 @@ HERO
   border:1px solid
   rgba(34,197,94,.15);
 
-  color:#22c55e;
+  color:var(--success);
 
   padding:10px 18px;
 
@@ -283,9 +278,9 @@ HERO
 }
 
 .metric{
-  background:#101827;
+  background:var(--card-hover);
 
-  border:1px solid #1f2937;
+  border:1px solid var(--border);
 
   border-radius:20px;
 
@@ -295,13 +290,13 @@ HERO
 }
 
 .metric:hover{
-  border-color:#334155;
+  border-color:var(--primary);
 }
 
 .metric span{
   display:block;
 
-  color:#64748b;
+  color:var(--text-secondary);
 
   font-size:11px;
 
@@ -318,7 +313,7 @@ HERO
   font-size:22px !important;
   font-weight:600;
   line-height:1.2;
-  color:#e2e8f0;
+  color:var(--text);
 }
 
 .metric.danger{
@@ -327,7 +322,7 @@ HERO
 }
 
 .metric.danger h2{
-  color:#ef4444;
+  color:var(--danger);
 }
 
 @media(max-width:1000px){
@@ -384,7 +379,7 @@ AI SUMMARY
 
 .ai-summary-card h3{
 
-  color:#d8b4fe;
+  color:var(--purple);
 
   margin-bottom:12px;
 }
@@ -512,7 +507,7 @@ AI INSIGHTS
 .focus-list li{
     margin-bottom:12px;
     line-height:1.7;
-    color:#cfd6ff;
+    color:var(--text);
     font-size:16px;
 }
 
@@ -524,11 +519,7 @@ AI INSIGHTS
 
 .insight-card{
     width:100%;
-    background:linear-gradient(
-        180deg,
-        #1B2135 0%,
-        #171C2E 100%
-    );
+    background:var(--card);
     border:1px solid rgba(167,139,250,.18);
     border-radius:24px;
     padding:32px;
@@ -537,13 +528,13 @@ AI INSIGHTS
 
 .insight-card:hover{
     transform:translateY(-5px);
-    border-color:#8B5CF6;
+    border-color:var(--purple);
     box-shadow:0 14px 34px rgba(139,92,246,.18);
 }
 
 .insight-card strong{
     display:block;
-    color:#B388FF;
+    color:var(--purple);
     font-size:12px;
     font-weight:700;
     letter-spacing:2px;
@@ -554,7 +545,7 @@ AI INSIGHTS
 .insight-card h3{
     font-size:35px;
     font-weight:700;
-    color:#F8FAFC;
+    color:var(--text);
     margin-bottom:20px;
     line-height:1.2;
 }
@@ -562,7 +553,7 @@ AI INSIGHTS
 .insight-card p{
     font-size:17px;
     line-height:1.9;
-    color:#D6D9E6;
+    color:var(--text-secondary);
     font-weight:400;
 }
 
@@ -682,7 +673,7 @@ MISTAKES
 
   margin-top:14px;
 
-  color:#fca5a5;
+  color:var(--danger);
 }
 
 /* =========================
@@ -731,9 +722,9 @@ REVISION
 
   border-radius:16px;
 
-  background:white;
+  background:var(--primary);
 
-  color:black;
+  color:#ffffff;
 
   padding:16px;
 
@@ -794,15 +785,15 @@ RESPONSIVE
 }
 
 .last-seen.recent{
-  color:#22c55e;
+  color:var(--success);
 }
 
 .last-seen.old{
-  color:#f59e0b;
+  color:var(--warning);
 }
 
 .last-seen.stale{
-  color:#ef4444;
+  color:var(--danger);
 }
 
 /* =========================
@@ -820,11 +811,11 @@ PATTERNS PAGE
 
   border-radius:999px;
 
-  background:#111827;
+  background:var(--card-hover);
 
-  border:1px solid #1f2937;
+  border:1px solid var(--border);
 
-  color:#8b5cf6;
+  color:var(--purple);
 
   font-size:11px;
 
@@ -854,7 +845,7 @@ PATTERNS PAGE
 .pattern-header p{
   font-size:16px;
 
-  color:#64748b;
+  color:var(--text-secondary);
 }
 
 /* GRID */
@@ -877,9 +868,9 @@ PATTERNS PAGE
 /* CARD */
 
 .pattern-card{
-  background:#0d1117;
+  background:var(--card);
 
-  border:1px solid #1f2937;
+  border:1px solid var(--border);
 
   border-radius:24px;
 
@@ -898,7 +889,7 @@ PATTERNS PAGE
 
   transform:translateY(-4px);
 
-  border-color:#8b5cf6;
+  border-color:var(--purple);
 
   box-shadow:
   0 10px 30px rgba(139,92,246,.12);
@@ -919,7 +910,7 @@ PATTERNS PAGE
 
   font-weight:700;
 
-  color:white;
+  color:var(--text);
 }
 
 .pattern-badge{
@@ -937,28 +928,28 @@ PATTERNS PAGE
   background:
   rgba(34,197,94,.12);
 
-  color:#22c55e;
+  color:var(--success);
 }
 
 .medium{
   background:
   rgba(245,158,11,.12);
 
-  color:#f59e0b;
+  color:var(--warning);
 }
 
 .weak{
   background:
   rgba(239,68,68,.12);
 
-  color:#ef4444;
+  color:var(--danger);
 }
 
 /* DESCRIPTION */
 
 .pattern-desc{
 
-  color:#94a3b8;
+  color:var(--text-secondary);
 
   font-size:14px;
 
@@ -982,9 +973,9 @@ PATTERNS PAGE
 
 .pattern-tags span{
 
-  background:#111827;
+  background:var(--card-hover);
 
-  border:1px solid #1f2937;
+  border:1px solid var(--border);
 
   border-radius:999px;
 
@@ -992,7 +983,7 @@ PATTERNS PAGE
 
   font-size:12px;
 
-  color:#cbd5e1;
+  color:var(--text-secondary);
 }
 
 /* META */
@@ -1010,7 +1001,7 @@ PATTERNS PAGE
 
   display:block;
 
-  color:#64748b;
+  color:var(--text-secondary);
 
   font-size:11px;
 
@@ -1025,7 +1016,7 @@ PATTERNS PAGE
 
   font-size:20px;
 
-  color:white;
+  color:var(--text);
 
   font-weight:700;
 }
@@ -1038,9 +1029,9 @@ PATTERNS PAGE
 
   padding-top:14px;
 
-  border-top:1px solid #1f2937;
+  border-top:1px solid var(--border);
 
-  color:#64748b;
+  color:var(--text-secondary);
 
   font-size:12px;
 }

@@ -5,7 +5,14 @@ import { formatRelative } from "../../lib/memoryEngine";
 export default function QuizResultsHistory() {
   const { data } = useMemory();
   const results = data.quizResults.slice(0, 7).reverse();
-  const maxScore = 10;
+  const avgPct =
+    results.length > 0
+      ? Math.round(
+          (results.reduce((s, r) => s + r.score / r.total, 0) /
+            results.length) *
+            100
+        )
+      : 0;
 
   return (
     <section className="rev-panel quiz-history-card">
@@ -45,16 +52,7 @@ export default function QuizResultsHistory() {
 
       <div className="quiz-history-summary">
         <span>
-          Last week avg:{" "}
-          <strong className="mono">
-            {results.length > 0
-              ? (
-                  results.reduce((s, r) => s + r.score, 0) /
-                  results.length
-                ).toFixed(1)
-              : 0}
-            /{maxScore}
-          </strong>
+          Last week avg: <strong className="mono">{avgPct}%</strong>
         </span>
       </div>
     </section>

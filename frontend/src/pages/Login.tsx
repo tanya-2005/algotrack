@@ -1,5 +1,6 @@
 import "../styles/login.css";
 import { useState } from "react";
+import { BrainCircuit, Lock, Mail, User, Sparkles } from "lucide-react";
 import { resetPassword, signIn, signUp } from "../services/auth";
 import { disableDemoMode, enableDemoMode } from "../lib/demoMode";
 
@@ -7,116 +8,161 @@ export default function Login() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const handleLogin = async () => {
-    const { error } = await signIn(
-      email,
-      password
-    );
+    if (submitting) return;
 
-    if (error) {
-      alert(error.message);
+    if (!email.trim() || !password) {
+      alert("Enter your email and password first.");
       return;
     }
 
-    // Full navigation (not React Router's navigate) so MemoryProvider/App
-    // remount fresh and correctly pick up the real session instead of
-    // whatever stale demo/auth state was already in memory for this tab.
-    disableDemoMode();
-    window.location.href = "/dashboard";
+    setSubmitting(true);
+    try {
+      const { error } = await signIn(email, password);
+
+      if (error) {
+        alert(error.message);
+        return;
+      }
+
+      // Full navigation (not React Router's navigate) so MemoryProvider/App
+      // remount fresh and correctly pick up the real session instead of
+      // whatever stale demo/auth state was already in memory for this tab.
+      disableDemoMode();
+      window.location.href = "/dashboard";
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleSignup = async () => {
+    if (submitting) return;
+
     if (!name.trim()) {
       alert("Enter your name first.");
       return;
     }
 
-    const { data, error } = await signUp(
-      email,
-      password,
-      name.trim()
-    );
-
-    if (error) {
-      alert(error.message);
+    if (!email.trim() || !password) {
+      alert("Enter your email and password first.");
       return;
     }
 
-    disableDemoMode();
+    setSubmitting(true);
+    try {
+      const { data, error } = await signUp(
+        email,
+        password,
+        name.trim()
+      );
 
-    // Email confirmation is off on this project, so signUp() already
-    // returns an active session - take the user straight to their
-    // dashboard instead of making them log in again immediately after.
-    if (data.session) {
-      window.location.href = "/dashboard";
-      return;
+      if (error) {
+        alert(error.message);
+        return;
+      }
+
+      disableDemoMode();
+
+      // Email confirmation is off on this project, so signUp() already
+      // returns an active session - take the user straight to their
+      // dashboard instead of making them log in again immediately after.
+      if (data.session) {
+        window.location.href = "/dashboard";
+        return;
+      }
+
+      alert("Account created! Check your email to confirm, then log in.");
+    } finally {
+      setSubmitting(false);
     }
-
-    alert("Account created! Check your email to confirm, then log in.");
   };
 
   const handleForgotPassword = async () => {
+    if (submitting) return;
+
     if (!email) {
       alert("Enter your email above first, then click Forgot Password.");
       return;
     }
 
-    const { error } = await resetPassword(email);
+    setSubmitting(true);
+    try {
+      const { error } = await resetPassword(email);
 
-    if (error) {
-      alert(error.message);
-      return;
+      if (error) {
+        alert(error.message);
+        return;
+      }
+
+      alert("Password reset email sent. Check your inbox.");
+    } finally {
+      setSubmitting(false);
     }
-
-    alert("Password reset email sent. Check your inbox.");
   };
 
   return (
     <div className="login-page">
       <div className="login-card">
+        <div className="login-logo">
+          <span className="login-logo-mark">
+            <BrainCircuit size={26} />
+          </span>
+        </div>
+
         <h1 className="login-title">
-          DSA Memory OS
+          AlgoTrack
         </h1>
 
         <p className="login-subtitle">
           Track. Reflect. Remember.
         </p>
 
-        <input
-          type="text"
-          placeholder="Name"
-          className="login-input"
-          value={name}
-          onChange={(e) =>
-            setName(e.target.value)
-          }
-        />
+        <div className="login-field">
+          <User size={17} className="login-field-icon" />
+          <input
+            type="text"
+            placeholder="Name"
+            className="login-input"
+            value={name}
+            onChange={(e) =>
+              setName(e.target.value)
+            }
+          />
+        </div>
 
-        <input
-          type="email"
-          placeholder="Email"
-          className="login-input"
-          value={email}
-          onChange={(e) =>
-            setEmail(e.target.value)
-          }
-        />
+        <div className="login-field">
+          <Mail size={17} className="login-field-icon" />
+          <input
+            type="email"
+            placeholder="Email"
+            className="login-input"
+            value={email}
+            onChange={(e) =>
+              setEmail(e.target.value)
+            }
+          />
+        </div>
 
-        <input
-          type="password"
-          placeholder="Password"
-          className="login-input"
-          value={password}
-          onChange={(e) =>
-            setPassword(e.target.value)
-          }
-        />
+        <div className="login-field">
+          <Lock size={17} className="login-field-icon" />
+          <input
+            type="password"
+            placeholder="Password"
+            className="login-input"
+            value={password}
+            onChange={(e) =>
+              setPassword(e.target.value)
+            }
+          />
+        </div>
 
         <button
           type="button"
           className="forgot-password-link"
           onClick={handleForgotPassword}
+          disabled={submitting}
         >
           Forgot Password?
         </button>
@@ -124,18 +170,22 @@ export default function Login() {
         <button
           className="login-btn"
           onClick={handleLogin}
+          disabled={submitting}
         >
-          Login
+          {submitting ? "Please wait..." : "Login"}
         </button>
 
         <button
           className="signup-btn"
           onClick={handleSignup}
+          disabled={submitting}
         >
-          Create Account
+          {submitting ? "Please wait..." : "Create Account"}
         </button>
 
-        <div className="divider"></div>
+        <div className="divider">
+          <span>or</span>
+        </div>
 
         <button
           className="demo-btn"
@@ -143,8 +193,9 @@ export default function Login() {
             enableDemoMode();
             window.location.href = "/dashboard";
           }}
+          disabled={submitting}
         >
-          🚀 Explore Demo
+          <Sparkles size={16} /> Explore Demo
         </button>
       </div>
     </div>
