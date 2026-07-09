@@ -51,3 +51,22 @@ export async function saveSummary(
 
   if (error) throw error;
 }
+
+export async function sendCoachMessage(
+  message: string,
+  history: { role: "user" | "coach"; text: string }[],
+  context: Record<string, unknown>
+): Promise<string> {
+  const { data, error } = await supabase.functions.invoke("ai-coach-chat", {
+    body: {
+      message,
+      history,
+      context,
+    },
+  });
+
+  if (error) throw error;
+  if (!data?.reply) throw new Error("No reply from AI Coach");
+
+  return data.reply as string;
+}

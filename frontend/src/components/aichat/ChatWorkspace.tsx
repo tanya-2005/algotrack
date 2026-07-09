@@ -3,9 +3,12 @@ import { ArrowUp, Bot, UserRound } from "lucide-react";
 import { useMemory } from "../../context/MemoryContext";
 import {
   getForgottenConcepts,
+  getMemoryScore,
   getRecommendedRevision,
+  getStrongestPattern,
   getWeakestPattern,
 } from "../../lib/memoryEngine";
+import { sendCoachMessage } from "../../services/aiService";
 
 type Message = {
   id: number;
@@ -17,7 +20,7 @@ const initialMessages: Message[] = [
   {
     id: 1,
     role: "coach",
-    text: "Hey Tanya 👋 I'm your DSA Coach. I have access to your questions, reflections, patterns, quiz history, and mistakes. Ask me what to revise, where you're weak, or to quiz you on any pattern.",
+    text: "Hey 👋 I'm your DSA Coach. I have access to your questions, reflections, patterns, quiz history, and mistakes. Ask me what to revise, where you're weak, or to quiz you on any pattern.",
   },
 ];
 
@@ -25,33 +28,53 @@ type Props = {
   suggestedPrompt: string;
 };
 
-function buildCoachResponse(prompt: string, data: ReturnType<typeof useMemory>["data"]) {
+function buildCoachContext(data: ReturnType<typeof useMemory>["data"]) {
+  return {
+    memoryScore: getMemoryScore(data),
+    weakestPattern: getWeakestPattern(data),
+    strongestPattern: getStrongestPattern(data),
+    forgottenConcepts: getForgottenConcepts(data),
+    recommended: getRecommendedRevision(data),
+    totalQuestions: data.questions.length,
+    patterns: data.patterns.map((p) => ({ name: p.name, status: p.status })),
+    recentQuestions: data.questions.slice(0, 15).map((q) => ({
+      name: q.name,
+      pattern: q.pattern,
+      difficulty: q.difficulty,
+      confidence: q.confidence,
+      reflection: q.reflection,
+      mistakes: q.mistakes,
+      trigger: q.trigger,
+    })),
+  };
+}
+
+// Used only if the AI call itself fails (e.g. an OpenRouter free-tier rate
+// limit) - keeps the coach usable and still grounded in the user's real
+// data instead of showing an error.
+function buildFallbackResponse(
+  prompt: string,
+  data: ReturnType<typeof useMemory>["data"]
+) {
   const lower = prompt.toLowerCase();
   const recommended = getRecommendedRevision(data);
   const weakest = getWeakestPattern(data);
   const forgotten = getForgottenConcepts(data);
 
   if (lower.includes("revise today") || lower.includes("revision plan")) {
-    return `Based on your queue and retention scores, start with **${recommended.pattern}** (${recommended.duration}). You have ${data.revisionQueue.filter((i) => !i.completed).length} items due. Priority: ${forgotten.slice(0, 3).join(", ") || "maintain strong patterns"}.`;
+    return `Based on your queue and retention scores, start with ${recommended.pattern} (${recommended.duration}). You have ${data.revisionQueue.filter((i) => !i.completed).length} items due. Priority: ${forgotten.slice(0, 3).join(", ") || "maintain strong patterns"}.`;
   }
   if (lower.includes("weakest") || lower.includes("weak")) {
-    return `Your weakest pattern right now is **${weakest}**. Focus on questions with confidence ≤ 3 and mistakes around ${forgotten[0] ?? "core concepts"}.`;
+    return `Your weakest pattern right now is ${weakest}. Focus on questions with confidence <= 3 and mistakes around ${forgotten[0] ?? "core concepts"}.`;
   }
   if (lower.includes("quiz")) {
-    return `I'll generate a quiz from your mistakes. Try: window shrinking (${data.questions.filter((q) => q.pattern === "Sliding Window").length} SW questions), BFS visited state, and DP state definition. Head to **Revision → AI Quiz Arena** for the full session.`;
+    return `Head to Revision → AI Quiz Arena for a full quiz session generated from your real mistakes and weak patterns.`;
   }
-  if (lower.includes("sliding window")) {
-    const sw = data.questions.filter((q) => q.pattern === "Sliding Window");
-    return `Sliding Window — from your log: ${sw.map((q) => q.name).join(", ")}. Key trigger you wrote: "${sw[0]?.trigger ?? "expand/shrink window"}". Review shrinking conditions before your next session.`;
+  const latest = data.questions.find((q) => q.reflection);
+  if (lower.includes("reflection") && latest) {
+    return `Latest reflection (${latest.name}): "${latest.reflection}". You often forget: ${latest.mistakes.join("; ") || "—"}.`;
   }
-  if (lower.includes("reflection")) {
-    const latest = data.questions.find((q) => q.reflection);
-    return `Latest reflection (${latest?.name}): "${latest?.reflection}". You often forget: ${latest?.mistakes.join("; ") ?? "—"}. Revisit this in Memory Flashback on the Revision page.`;
-  }
-  if (lower.includes("interview")) {
-    return `Interview set from your weak areas: 1) Implement Trie with your noted isEnd bug. 2) Course Schedule topo sort cycle detection. 3) Minimum Window Substring shrink logic. 4) Multi-source BFS (Rotting Oranges). 5) House Robber state transition.`;
-  }
-  return `I analyzed your memory graph. Memory score: ${data.questions.length ? Math.round(data.questions.reduce((s, q) => s + q.confidence, 0) / data.questions.length / 5 * 100) : 0}%. Weakest: ${weakest}. Recommended today: ${recommended.pattern}. Ask me to quiz you or explain any pattern.`;
+  return `Memory score: ${getMemoryScore(data)}%. Weakest: ${weakest}. Recommended today: ${recommended.pattern}. (The AI coach is momentarily busy — this is a quick offline summary of your real data.)`;
 }
 
 export default function ChatWorkspace({ suggestedPrompt }: Props) {
@@ -72,9 +95,11 @@ export default function ChatWorkspace({ suggestedPrompt }: Props) {
     }
   }, [suggestedPrompt]);
 
-  const sendMessage = () => {
+  const sendMessage = async () => {
     if (!draft.trim() || isTyping) return;
     const userText = draft;
+    const history = messages.map((m) => ({ role: m.role, text: m.text }));
+
     setMessages((prev) => [
       ...prev,
       { id: nextId.current++, role: "user", text: userText },
@@ -82,17 +107,27 @@ export default function ChatWorkspace({ suggestedPrompt }: Props) {
     setDraft("");
     setIsTyping(true);
 
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: nextId.current++,
-          role: "coach",
-          text: buildCoachResponse(userText, data),
-        },
-      ]);
-      setIsTyping(false);
-    }, 900);
+    let replyText: string;
+    try {
+      replyText = await sendCoachMessage(
+        userText,
+        history,
+        buildCoachContext(data)
+      );
+    } catch (err) {
+      console.error("AI Coach request failed, using offline fallback:", err);
+      replyText = buildFallbackResponse(userText, data);
+    }
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: nextId.current++,
+        role: "coach",
+        text: replyText,
+      },
+    ]);
+    setIsTyping(false);
   };
 
   return (
