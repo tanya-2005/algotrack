@@ -1,9 +1,23 @@
 import { supabase } from "../lib/supabase";
 
 export async function getQuestionStats() {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      totalQuestions: 0,
+      totalPatterns: 0,
+      retention: 0,
+      dueToday: 0,
+    };
+  }
+
   const { data, error } = await supabase
     .from("problems")
-    .select("*");
+    .select("*")
+    .eq("user_id", user.id);
 
   if (error) throw error;
 

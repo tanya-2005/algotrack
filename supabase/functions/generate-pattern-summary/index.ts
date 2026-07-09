@@ -242,45 +242,91 @@ Good examples:
 Return ONLY valid JSON.
 `;
 
-    const aiResponse = await fetch(
-      "https://openrouter.ai/api/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": "http://localhost:5173",
-          "X-Title": "DSA Memory OS",
-        },
-        body: JSON.stringify({
-          model: "google/gemma-4-31b-it:free",
-          messages: [
-            {
-              role: "user",
-              content: prompt,
-            },
-          ],
-        }),
-      }
-    );
-    if (!aiResponse.ok) {
-  const text = await aiResponse.text();
+    // OpenRouter's free-tier models are shared/rate-limited and routinely
+    // return 429s independent of anything this project does. Try a short
+    // chain of other well-known free models before giving up, instead of
+    // failing the whole feature on the first model's rate limit.
+    const MODEL_CANDIDATES = [
+      "google/gemma-4-31b-it:free",
+      "meta-llama/llama-3.3-70b-instruct:free",
+      "qwen/qwen3-next-80b-a3b-instruct:free",
+    ];
 
-  return new Response(
-    JSON.stringify({
-      error: "OpenRouter request failed",
-      status: aiResponse.status,
-      body: text,
-    }),
-    {
-      status: 500,
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "application/json",
-      },
+    let aiResponse: Response | null = null;
+    let lastErrorStatus = 0;
+    let lastErrorBody = "";
+
+    for (const model of MODEL_CANDIDATES) {
+      const res = await fetch(
+        "https://openrouter.ai/api/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://algotrack-rho.vercel.app",
+            "X-Title": "DSA Memory OS",
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              {
+                role: "user",
+                content: prompt,
+              },
+            ],
+          }),
+        }
+      );
+
+      if (res.ok) {
+        aiResponse = res;
+        break;
+      }
+
+      lastErrorStatus = res.status;
+      lastErrorBody = await res.text();
+
+      // Only fall through to the next model on rate-limit/unavailable
+      // responses. Other errors (bad key, malformed request) won't be
+      // fixed by switching models, so stop retrying.
+      if (lastErrorStatus !== 429 && lastErrorStatus !== 503) {
+        break;
+      }
+
+      // OpenRouter's free tier throttles per-key (not just per-model), so
+      // switching models alone often isn't enough. It tells us exactly how
+      // long to back off via retry_after_seconds - honor it (capped, since
+      // the function has a hard execution time limit).
+      let waitSeconds = 3;
+      try {
+        const parsed = JSON.parse(lastErrorBody);
+        const hinted = parsed?.error?.metadata?.retry_after_seconds;
+        if (typeof hinted === "number") {
+          waitSeconds = Math.min(Math.ceil(hinted), 8);
+        }
+      } catch {
+        /* use default wait */
+      }
+      await new Promise((resolve) => setTimeout(resolve, waitSeconds * 1000));
     }
-  );
-}
+
+    if (!aiResponse) {
+      return new Response(
+        JSON.stringify({
+          error: "OpenRouter request failed for all candidate models",
+          status: lastErrorStatus,
+          body: lastErrorBody,
+        }),
+        {
+          status: 500,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
 
     const data = await aiResponse.json();
 
