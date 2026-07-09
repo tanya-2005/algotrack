@@ -10,7 +10,13 @@ export default function RevisionHero() {
       </div>
       <div className="rev-header-meta">
         <span><span className="live-dot" /> Memory sync complete</span>
-        <strong>Saturday, 20 June</strong>
+        <strong>
+          {new Date().toLocaleDateString("en-US", {
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+          })}
+        </strong>
       </div>
     </header>
   );

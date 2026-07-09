@@ -1,8 +1,12 @@
 import { CalendarDays, Flame } from "lucide-react";
+import { useMemory } from "../../context/MemoryContext";
+import { getHeatmapData } from "../../lib/memoryEngine";
+
+const LEVEL_CLASSES = ["level-0", "level-1", "level-2", "level-3", "level-4"];
 
 function Heatmap() {
-  const weeks = Array.from({ length: 18 });
-  const days = Array.from({ length: 5 });
+  const { data } = useMemory();
+  const heatmap = getHeatmapData(data.questions);
 
   return (
     <div className="heatmap-card">
@@ -17,31 +21,19 @@ function Heatmap() {
 
         <div className="streak-badge">
           <Flame size={18} />
-          <span>18 Day Revision Streak</span>
+          <span>{heatmap.currentStreak} Day Revision Streak</span>
         </div>
       </div>
 
       <div className="heatmap-grid">
-        {weeks.map((_, weekIndex) => (
+        {heatmap.weeks.map((week, weekIndex) => (
           <div key={weekIndex} className="heatmap-column">
-            {days.map((_, dayIndex) => {
-              const levels = [
-                "level-0",
-                "level-1",
-                "level-2",
-                "level-3",
-                "level-4",
-              ];
-
-              return (
-                <div
-                  key={dayIndex}
-                  className={`heat-cell ${
-                    levels[(weekIndex + dayIndex) % 5]
-                  }`}
-                />
-              );
-            })}
+            {week.map((level, dayIndex) => (
+              <div
+                key={dayIndex}
+                className={`heat-cell ${LEVEL_CLASSES[level]}`}
+              />
+            ))}
           </div>
         ))}
       </div>
@@ -49,19 +41,19 @@ function Heatmap() {
       <div className="heatmap-stats">
         <div className="heatmap-stat">
           <span className="heatmap-stat-label">Best Day</span>
-          <span className="heatmap-stat-value">Saturday</span>
+          <span className="heatmap-stat-value">{heatmap.bestDay}</span>
         </div>
         <div className="heatmap-stat">
           <span className="heatmap-stat-label">Questions Logged</span>
-          <span className="heatmap-stat-value">234</span>
+          <span className="heatmap-stat-value">{heatmap.questionsLogged}</span>
         </div>
         <div className="heatmap-stat">
           <span className="heatmap-stat-label">Revisions Completed</span>
-          <span className="heatmap-stat-value">81</span>
+          <span className="heatmap-stat-value">{heatmap.revisionsCompleted}</span>
         </div>
         <div className="heatmap-stat">
           <span className="heatmap-stat-label">Longest Streak</span>
-          <span className="heatmap-stat-value">24 Days</span>
+          <span className="heatmap-stat-value">{heatmap.longestStreak} Days</span>
         </div>
       </div>
 

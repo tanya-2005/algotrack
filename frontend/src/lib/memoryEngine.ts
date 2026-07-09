@@ -321,3 +321,187 @@ export function getQuickRecallQuestion(data: AppData): Question | null {
   if (candidates.length === 0) return data.questions[0] ?? null;
   return candidates[Math.floor(Math.random() * candidates.length)];
 }
+
+export function buildRevisionQueueFromData(
+  questions: Question[],
+  patterns: PatternData[]
+): RevisionQueueItem[] {
+  const dueQuestions = questions
+    .filter((q) => getQuestionStatus(q) !== "mastered")
+    .sort((a, b) => computeRetention(a) - computeRetention(b))
+    .slice(0, 5)
+    .map((q) => ({
+      id: `rq-q-${q.id}`,
+      type: "question" as const,
+      title: q.name,
+      completed: false,
+      skipped: false,
+      reviewAgain: false,
+    }));
+
+  const duePatterns = patterns
+    .filter((p) => p.status !== "Strong")
+    .slice(0, 3)
+    .map((p) => ({
+      id: `rq-p-${p.name}`,
+      type: "pattern" as const,
+      title: `${p.name} Pattern`,
+      completed: false,
+      skipped: false,
+      reviewAgain: false,
+    }));
+
+  return [...dueQuestions, ...duePatterns];
+}
+
+const HEATMAP_WEEKS = 18;
+const HEATMAP_DAYS = 5;
+
+export function getHeatmapData(questions: Question[]) {
+  const totalCells = HEATMAP_WEEKS * HEATMAP_DAYS;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const counts = new Array(totalCells).fill(0);
+  const weekdayTotals = new Array(7).fill(0);
+
+  questions.forEach((q) => {
+    if (!q.solvedAt) return;
+    const solved = new Date(q.solvedAt);
+    solved.setHours(0, 0, 0, 0);
+    const diffDays = Math.round(
+      (today.getTime() - solved.getTime()) / MS_DAY
+    );
+    if (diffDays >= 0 && diffDays < totalCells) {
+      counts[diffDays]++;
+    }
+    if (diffDays >= 0 && diffDays < 90) {
+      weekdayTotals[solved.getDay()]++;
+    }
+  });
+
+  const toLevel = (count: number) =>
+    count === 0 ? 0 : count === 1 ? 1 : count === 2 ? 2 : count === 3 ? 3 : 4;
+
+  // weekIndex 0 = oldest (leftmost), highest weekIndex = most recent.
+  const weeks: number[][] = [];
+  for (let w = 0; w < HEATMAP_WEEKS; w++) {
+    const col: number[] = [];
+    for (let d = 0; d < HEATMAP_DAYS; d++) {
+      const idx = (HEATMAP_WEEKS - 1 - w) * HEATMAP_DAYS + d;
+      col.push(toLevel(counts[idx] ?? 0));
+    }
+    weeks.push(col);
+  }
+
+  const dayNames = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ];
+  const bestDayIndex = weekdayTotals.reduce(
+    (best, val, i, arr) => (val > arr[best] ? i : best),
+    0
+  );
+  const bestDay = questions.length > 0 ? dayNames[bestDayIndex] : "—";
+
+  let currentStreak = 0;
+  for (let i = 0; i < totalCells; i++) {
+    if (counts[i] > 0) currentStreak++;
+    else break;
+  }
+
+  let longestStreak = 0;
+  let running = 0;
+  for (let i = totalCells - 1; i >= 0; i--) {
+    if (counts[i] > 0) {
+      running++;
+      longestStreak = Math.max(longestStreak, running);
+    } else {
+      running = 0;
+    }
+  }
+
+  return {
+    weeks,
+    bestDay,
+    questionsLogged: questions.length,
+    revisionsCompleted: questions.filter((q) => q.lastRevisedAt).length,
+    longestStreak,
+    currentStreak,
+  };
+}
+
+export function getMemoryScoreTrendData(
+  questions: Question[]
+): { month: string; score: number }[] {
+  if (questions.length === 0) return [];
+
+  const monthMap = new Map<string, { sum: number; n: number; order: number }>();
+  questions.forEach((q) => {
+    if (!q.solvedAt) return;
+    const d = new Date(q.solvedAt);
+    const key = `${d.getFullYear()}-${d.getMonth()}`;
+    const order = d.getFullYear() * 12 + d.getMonth();
+    const entry = monthMap.get(key) ?? { sum: 0, n: 0, order };
+    entry.sum += q.confidence;
+    entry.n += 1;
+    monthMap.set(key, entry);
+  });
+
+  return Array.from(monthMap.entries())
+    .sort((a, b) => a[1].order - b[1].order)
+    .slice(-6)
+    .map(([key, { sum, n }]) => {
+      const monthIdx = Number(key.split("-")[1]);
+      const label = new Date(2000, monthIdx, 1).toLocaleString("en-US", {
+        month: "short",
+      });
+      return { month: label, score: Math.round((sum / n / 5) * 100) };
+    });
+}
+
+export function getRevisionForecast(data: AppData): {
+  today: number;
+  tomorrow: number;
+  thisWeek: number;
+} {
+  const today = data.questions.filter(
+    (q) => getQuestionStatus(q) !== "mastered"
+  ).length;
+  const tomorrow = data.questions.filter(
+    (q) => predictRetention(q, 3) < 60
+  ).length;
+  const thisWeek = data.questions.filter(
+    (q) => predictRetention(q, 7) < 60
+  ).length;
+  return { today, tomorrow, thisWeek };
+}
+
+export function getRevisionRecommendationItems(data: AppData): {
+  pattern: string;
+  days: number;
+  confidence: number;
+  priority: "high" | "medium" | "low";
+}[] {
+  return data.patterns
+    .map((p) => {
+      const stats = getPatternStats(data, p);
+      return {
+        pattern: p.name,
+        days: daysSince(stats.lastSeen),
+        confidence: Math.round((stats.avgConfidence / 5) * 100),
+        priority: (stats.retention < 40
+          ? "high"
+          : stats.retention < 70
+            ? "medium"
+            : "low") as "high" | "medium" | "low",
+      };
+    })
+    .sort((a, b) => a.confidence - b.confidence)
+    .slice(0, 3);
+}

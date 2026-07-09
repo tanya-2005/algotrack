@@ -1,32 +1,16 @@
 import { Brain } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
-const revisionItems = [
-  {
-    pattern: "Trie",
-    days: 112,
-    confidence: 18,
-    priority: "high" as const,
-    featured: true,
-  },
-  {
-    pattern: "Union Find",
-    days: 85,
-    confidence: 32,
-    priority: "high" as const,
-    featured: false,
-  },
-  {
-    pattern: "Digit DP",
-    days: 97,
-    confidence: 41,
-    priority: "medium" as const,
-    featured: false,
-  },
-];
+import { useMemory } from "../../context/MemoryContext";
+import {
+  getRevisionForecast,
+  getRevisionRecommendationItems,
+} from "../../lib/memoryEngine";
 
 function Recommendations() {
   const navigate = useNavigate();
+  const { data } = useMemory();
+  const revisionItems = getRevisionRecommendationItems(data);
+  const forecast = getRevisionForecast(data);
   const [featured, ...rest] = revisionItems;
 
   return (
@@ -39,14 +23,21 @@ function Recommendations() {
         </div>
       </div>
 
-      <div className="revision-featured">
-        <span className="priority-badge">🚨 Highest Priority</span>
-        <h3>{featured.pattern}</h3>
-        <div className="revision-featured-meta">
-          <span>{featured.days} Days</span>
-          <span className="confidence-low">{featured.confidence}% Confidence</span>
+      {featured ? (
+        <div className="revision-featured">
+          <span className="priority-badge">🚨 Highest Priority</span>
+          <h3>{featured.pattern}</h3>
+          <div className="revision-featured-meta">
+            <span>{featured.days} Days</span>
+            <span className="confidence-low">{featured.confidence}% Confidence</span>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="revision-featured">
+          <span className="priority-badge">✅ All caught up</span>
+          <h3>No patterns need urgent revision</h3>
+        </div>
+      )}
 
       <div className="revision-list">
         {rest.map((item) => (
@@ -66,15 +57,15 @@ function Recommendations() {
         <h4>Revision Forecast</h4>
         <div className="forecast-row">
           <span>Today</span>
-          <span className="forecast-value">4 Questions</span>
+          <span className="forecast-value">{forecast.today} Questions</span>
         </div>
         <div className="forecast-row">
           <span>Tomorrow</span>
-          <span className="forecast-value">7 Questions</span>
+          <span className="forecast-value">{forecast.tomorrow} Questions</span>
         </div>
         <div className="forecast-row">
           <span>This Week</span>
-          <span className="forecast-value">23 Questions</span>
+          <span className="forecast-value">{forecast.thisWeek} Questions</span>
         </div>
       </div>
 

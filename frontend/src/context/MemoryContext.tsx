@@ -2,28 +2,87 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import type { AppData, QuizResult, RevisionQueueItem } from "../lib/types";
 import { defaultAppData } from "../lib/seedData";
-import { getMemoryScore } from "../lib/memoryEngine";
+import { supabase } from "../lib/supabase";
+import { isDemoMode } from "../lib/demoMode";
+import { buildRevisionQueueFromData, getMemoryScore } from "../lib/memoryEngine";
+import { fetchRealMemoryData } from "../services/memoryDataService";
 
-const STORAGE_KEY = "dsa-memory-data";
+// Local-only fields (see MEMORY.md audit: no backing Supabase tables yet).
+// questions/patterns are never persisted here - Demo Mode always uses the
+// fixed seed data, real accounts always refetch from Supabase.
+type LocalOnlyState = Pick<
+  AppData,
+  "activities" | "quizResults" | "dailyChallengeIndex" | "dailyChallengeDate"
+>;
 
-function loadData(): AppData {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return { ...defaultAppData, ...JSON.parse(raw) };
-  } catch {
-    /* use defaults */
-  }
-  return defaultAppData;
+const DEMO_STORAGE_KEY = "dsa-memory-data:demo";
+const storageKeyForUser = (userId: string) => `dsa-memory-data:${userId}`;
+
+function emptyLocalOnlyState(): LocalOnlyState {
+  return {
+    activities: [],
+    quizResults: [],
+    dailyChallengeIndex: 0,
+    dailyChallengeDate: new Date().toISOString().slice(0, 10),
+  };
 }
 
-function persist(data: AppData) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+function loadLocalOnlyState(
+  key: string,
+  fallback: LocalOnlyState
+): LocalOnlyState {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) return { ...fallback, ...JSON.parse(raw) };
+  } catch {
+    /* use fallback */
+  }
+  return fallback;
+}
+
+function persistLocalOnlyState(key: string, data: AppData) {
+  const { activities, quizResults, dailyChallengeIndex, dailyChallengeDate } =
+    data;
+  localStorage.setItem(
+    key,
+    JSON.stringify({
+      activities,
+      quizResults,
+      dailyChallengeIndex,
+      dailyChallengeDate,
+    })
+  );
+}
+
+function initialAppData(): AppData {
+  if (isDemoMode()) {
+    const local = loadLocalOnlyState(DEMO_STORAGE_KEY, {
+      activities: defaultAppData.activities,
+      quizResults: defaultAppData.quizResults,
+      dailyChallengeIndex: defaultAppData.dailyChallengeIndex,
+      dailyChallengeDate: defaultAppData.dailyChallengeDate,
+    });
+    return { ...defaultAppData, ...local };
+  }
+
+  // Real account (or auth still resolving): start empty rather than
+  // showing Demo Mode's fake seed content under a real login. The fetch
+  // effect below fills in real questions/patterns and this specific
+  // account's own local state once the session resolves.
+  return {
+    questions: [],
+    patterns: [],
+    revisionQueue: [],
+    ...emptyLocalOnlyState(),
+  };
 }
 
 type MemoryContextValue = {
@@ -44,9 +103,62 @@ type MemoryContextValue = {
 const MemoryContext = createContext<MemoryContextValue | null>(null);
 
 export function MemoryProvider({ children }: { children: ReactNode }) {
-  const [data, setData] = useState<AppData>(loadData);
+  const [data, setData] = useState<AppData>(initialAppData);
 
-  
+  // "" means "real account, but which one is still resolving" - writes are
+  // held back until we know whose local storage they belong to, so one
+  // account's activity/quiz history never bleeds into another's.
+  const storageKeyRef = useRef<string>(
+    isDemoMode() ? DEMO_STORAGE_KEY : ""
+  );
+
+  const persist = useCallback((next: AppData) => {
+    if (!storageKeyRef.current) return;
+    persistLocalOnlyState(storageKeyRef.current, next);
+  }, []);
+
+  // For a logged-in user, load that specific account's own local state and
+  // swap the demo/seed questions & patterns for their real Supabase data.
+  // Demo Mode never touches Supabase and keeps its existing seed-driven
+  // behavior, fully isolated under its own storage key.
+  useEffect(() => {
+    if (isDemoMode()) return;
+
+    let cancelled = false;
+
+    (async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (cancelled || !user) return;
+
+      const key = storageKeyForUser(user.id);
+      storageKeyRef.current = key;
+      const local = loadLocalOnlyState(key, emptyLocalOnlyState());
+
+      try {
+        const real = await fetchRealMemoryData();
+        if (cancelled || !real) return;
+        setData((prev) => ({
+          ...prev,
+          ...local,
+          questions: real.questions,
+          patterns: real.patterns,
+          revisionQueue: buildRevisionQueueFromData(
+            real.questions,
+            real.patterns
+          ),
+        }));
+      } catch (err) {
+        console.error("Failed to load real memory data:", err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const updateQueueItem = useCallback(
     (id: string, patch: Partial<RevisionQueueItem>) => {

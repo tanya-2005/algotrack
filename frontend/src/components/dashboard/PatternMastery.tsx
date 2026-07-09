@@ -1,13 +1,7 @@
 import { useEffect, useState } from "react";
 import { Layers } from "lucide-react";
-
-const patterns = [
-  { name: "Sliding Window", mastery: 92 },
-  { name: "Binary Search", mastery: 81 },
-  { name: "Graphs", mastery: 72 },
-  { name: "DP", mastery: 42 },
-  { name: "Trie", mastery: 18 },
-];
+import { useMemory } from "../../context/MemoryContext";
+import { getPatternStats } from "../../lib/memoryEngine";
 
 function getBarColor(mastery: number) {
   if (mastery >= 80) return "bar-green";
@@ -17,7 +11,16 @@ function getBarColor(mastery: number) {
 }
 
 function PatternMastery() {
+  const { data } = useMemory();
   const [animated, setAnimated] = useState(false);
+
+  const patterns = data.patterns
+    .map((p) => ({
+      name: p.name,
+      mastery: getPatternStats(data, p).retention,
+    }))
+    .sort((a, b) => b.mastery - a.mastery)
+    .slice(0, 6);
 
   useEffect(() => {
     const timer = setTimeout(() => setAnimated(true), 100);
