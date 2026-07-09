@@ -1,3 +1,5 @@
+import { Search } from "lucide-react";
+
 type Props = {
   search: string;
   setSearch: React.Dispatch<
@@ -18,8 +20,9 @@ function QuestionFilters(props: Props) {
   } = props;
 
   return (
-    <div>
+    <div className="questions-toolbar">
       <div className="search-wrapper">
+        <Search size={16} className="search-icon" />
         <input
           type="text"
           placeholder="Search questions..."

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChevronRight } from "lucide-react";
 import ReflectionPreview from "./ReflectionPreview";
 import ReflectionPanel from "./ReflectionPanel";
 import { getQuestions } from "../../services/questionservice";
@@ -100,10 +101,17 @@ const matchesDifficulty =
           <span>Question</span>
           <span>Topic</span>
           <span>Difficulty</span>
+          <span />
         </div>
 
+        {loading && !loadError && (
+          <div className="table-state-row">
+            <span>Loading your questions…</span>
+          </div>
+        )}
+
         {loadError && (
-          <div className="question-row" style={{ cursor: "default" }}>
+          <div className="table-state-row">
             <span>
               Couldn't load your questions. Check your connection and try
               again.
@@ -121,7 +129,7 @@ const matchesDifficulty =
         )}
 
         {!loading && !loadError && filteredQuestions.length === 0 && (
-          <div className="question-row" style={{ cursor: "default" }}>
+          <div className="table-state-row">
             <span>No questions logged yet.</span>
           </div>
         )}
@@ -147,6 +155,8 @@ const matchesDifficulty =
             >
               {q.difficulty}
             </span>
+
+            <ChevronRight size={16} className="row-chevron" />
 
             <div className="reflection-preview-wrapper">
               <ReflectionPreview

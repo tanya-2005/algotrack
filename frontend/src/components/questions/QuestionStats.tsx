@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { BookOpen, Shapes, TrendingUp, Clock } from "lucide-react";
 import { getQuestionStats } from "../../services/statsService";
 import { useMemory } from "../../context/MemoryContext";
 import { isDemoMode } from "../../lib/demoMode";
@@ -78,43 +79,43 @@ function QuestionStats({
   return (
     <div className="question-stats">
 
-      <div className="stat-pill questions">
-        <span className="stat-number">
+      <div className="q-stat-card q-stat-questions">
+        <div className="q-stat-top">
+          <span className="q-stat-label">Questions</span>
+          <BookOpen size={16} className="q-stat-icon" />
+        </div>
+        <span className="q-stat-number">
           {display.totalQuestions}
         </span>
-
-        <span className="stat-label">
-          Questions
-        </span>
       </div>
 
-      <div className="stat-pill patterns">
-        <span className="stat-number">
+      <div className="q-stat-card q-stat-patterns">
+        <div className="q-stat-top">
+          <span className="q-stat-label">Patterns</span>
+          <Shapes size={16} className="q-stat-icon" />
+        </div>
+        <span className="q-stat-number">
           {display.totalPatterns}
         </span>
-
-        <span className="stat-label">
-          Patterns
-        </span>
       </div>
 
-      <div className="stat-pill retention">
-        <span className="stat-number">
+      <div className="q-stat-card q-stat-retention">
+        <div className="q-stat-top">
+          <span className="q-stat-label">Retention</span>
+          <TrendingUp size={16} className="q-stat-icon" />
+        </div>
+        <span className="q-stat-number">
           {display.retention}%
         </span>
-
-        <span className="stat-label">
-          Retention
-        </span>
       </div>
 
-      <div className="stat-pill due">
-        <span className="stat-number">
+      <div className="q-stat-card q-stat-due">
+        <div className="q-stat-top">
+          <span className="q-stat-label">Due Today</span>
+          <Clock size={16} className="q-stat-icon" />
+        </div>
+        <span className="q-stat-number">
           {display.dueToday}
-        </span>
-
-        <span className="stat-label">
-          Due Today
         </span>
       </div>
 

@@ -1,3 +1,5 @@
+import { Plus } from "lucide-react";
+
 type QuestionHeaderProps = {
   onLogQuestion: () => void;
 };
@@ -20,7 +22,8 @@ function QuestionHeader({
         className="add-question-btn"
         onClick={onLogQuestion}
       >
-        Add Reflection
+        <Plus size={18} />
+        <span>Add Reflection</span>
       </button>
     </div>
   );
