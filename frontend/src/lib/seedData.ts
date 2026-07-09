@@ -7,6 +7,13 @@ const daysAgo = (n: number, hour = 21) => {
   return d.toISOString();
 };
 
+const daysFromNow = (n: number, hour = 21) => {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  d.setHours(hour, 30, 0, 0);
+  return d.toISOString();
+};
+
 export const defaultAppData: AppData = {
   questions: [
     {
@@ -23,6 +30,8 @@ export const defaultAppData: AppData = {
       solvedAt: daysAgo(11, 22),
       lastRevisedAt: daysAgo(4),
       timeTaken: 45,
+      revisionStar: 2,
+      nextRevisionAt: daysAgo(1),
     },
     {
       id: "q2",
@@ -38,6 +47,8 @@ export const defaultAppData: AppData = {
       solvedAt: daysAgo(8, 21),
       lastRevisedAt: daysAgo(2),
       timeTaken: 32,
+      revisionStar: 3,
+      nextRevisionAt: daysFromNow(5),
     },
     {
       id: "q3",
@@ -53,6 +64,8 @@ export const defaultAppData: AppData = {
       solvedAt: daysAgo(15, 20),
       lastRevisedAt: daysAgo(12),
       timeTaken: 55,
+      revisionStar: 2,
+      nextRevisionAt: daysAgo(9),
     },
     {
       id: "q4",
@@ -68,6 +81,8 @@ export const defaultAppData: AppData = {
       solvedAt: daysAgo(5, 22),
       lastRevisedAt: daysAgo(1),
       timeTaken: 28,
+      revisionStar: 1,
+      nextRevisionAt: daysAgo(0),
     },
     {
       id: "q5",
@@ -83,6 +98,8 @@ export const defaultAppData: AppData = {
       solvedAt: daysAgo(42, 19),
       lastRevisedAt: daysAgo(35),
       timeTaken: 40,
+      revisionStar: 1,
+      nextRevisionAt: daysAgo(34),
     },
     {
       id: "q6",
@@ -98,6 +115,8 @@ export const defaultAppData: AppData = {
       solvedAt: daysAgo(34, 21),
       lastRevisedAt: daysAgo(20),
       timeTaken: 25,
+      revisionStar: 4,
+      nextRevisionAt: daysAgo(5),
     },
     {
       id: "q7",
@@ -113,6 +132,8 @@ export const defaultAppData: AppData = {
       solvedAt: daysAgo(3, 22),
       lastRevisedAt: daysAgo(1),
       timeTaken: 22,
+      revisionStar: 5,
+      nextRevisionAt: daysFromNow(29),
     },
     {
       id: "q8",
@@ -128,6 +149,8 @@ export const defaultAppData: AppData = {
       solvedAt: daysAgo(9, 20),
       lastRevisedAt: daysAgo(9),
       timeTaken: 38,
+      revisionStar: 1,
+      nextRevisionAt: daysAgo(8),
     },
   ],
   patterns: [

@@ -36,45 +36,43 @@ export default function ReflectionPanel({
   onClose,
   onSave,
 }: ReflectionPanelProps) {
-  if (!question) return null;
-
+  // All hooks must run unconditionally on every render (React's rules of
+  // hooks) - the "no question yet" early return happens below, after every
+  // hook has been declared, not before.
   const [difficulty, setDifficulty] = useState(
-    question.difficulty || ""
+    question?.difficulty || ""
   );
 
   const [confidence, setConfidence] = useState(
-    question.confidence || 3
+    question?.confidence || 3
   );
 
   const [pattern, setPattern] = useState(
-    question.pattern || question.topic || ""
+    question?.pattern || question?.topic || ""
   );
 
-
-
   const [reflection, setReflection] = useState(
-    question.reflection || ""
+    question?.reflection || ""
   );
 
   const [mistakes, setMistakes] = useState(
-    question.mistakes || ""
+    question?.mistakes || ""
   );
 
   const [memoryTrigger, setMemoryTrigger] = useState(
-    question.memory_trigger || ""
+    question?.memory_trigger || ""
   );
 
   const [timeTaken, setTimeTaken] = useState(
-    question.time_taken || ""
+    question?.time_taken || ""
   );
 
   const [questionName, setQuestionName] = useState(
-    question.title || ""
+    question?.title || ""
   );
 
   const [saving, setSaving] = useState(false);
 
-  const isNew = question.isNew === true;
   useEffect(() => {
     if (!question) return;
 
@@ -87,6 +85,10 @@ export default function ReflectionPanel({
     setMemoryTrigger(question.memory_trigger || "");
     setTimeTaken(question.time_taken || "");
   }, [question]);
+
+  if (!question) return null;
+
+  const isNew = question.isNew === true;
 
   const handleSave = async () => {
     if (saving) return;

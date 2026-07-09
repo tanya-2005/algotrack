@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 
 import Sidebar from "./layouts/Sidebar";
-import QuickRecall from "./components/common/QuickRecall";
 import { supabase } from "./lib/supabase";
 import { isDemoMode } from "./lib/demoMode";
 
@@ -75,8 +74,6 @@ function App() {
           <Route path="/pdetails" element={<PDetails />} />
         </Routes>
       </main>
-
-      <QuickRecall />
     </div>
   );
 }

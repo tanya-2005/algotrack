@@ -38,6 +38,12 @@ export interface Question {
   solvedAt: string;
   lastRevisedAt?: string;
   timeTaken?: number;
+  // Leitner-style spaced repetition: 1-5, mapped to fixed review intervals
+  // (1/3/7/15/30 days). Increases on successful recall, decreases on a
+  // forgotten review. Falls back to 1/undefined for rows predating this
+  // system (e.g. Demo Mode seed data can omit these).
+  revisionStar?: number;
+  nextRevisionAt?: string;
 }
 
 export interface PatternData {
@@ -63,6 +69,11 @@ export interface RevisionQueueItem {
   completed: boolean;
   skipped: boolean;
   reviewAgain: boolean;
+  // Only set for type "question" items, sourced from the underlying
+  // question's revisionStar/nextRevisionAt.
+  questionId?: string;
+  star?: number;
+  nextRevisionAt?: string;
 }
 
 export interface QuizResult {

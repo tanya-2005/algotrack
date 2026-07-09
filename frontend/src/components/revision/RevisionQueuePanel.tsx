@@ -1,6 +1,10 @@
 import { BookOpenCheck, Check, RotateCcw, SkipForward } from "lucide-react";
 import { useMemory } from "../../context/MemoryContext";
-import { getEstimatedRevisionTime } from "../../lib/memoryEngine";
+import {
+  formatDueDate,
+  getEstimatedRevisionTime,
+  getOverdueQuestions,
+} from "../../lib/memoryEngine";
 
 export default function RevisionQueuePanel() {
   const {
@@ -15,6 +19,7 @@ export default function RevisionQueuePanel() {
   const completed = items.filter((i) => i.completed).length;
   const active = items.filter((i) => !i.skipped);
   const total = active.length;
+  const overdueCount = getOverdueQuestions(data.questions).length;
 
   return (
     <section className="revision-queue-panel">
@@ -39,6 +44,11 @@ export default function RevisionQueuePanel() {
           <span>
             Memory Score: <strong>{memoryScore}%</strong>
           </span>
+          {overdueCount > 0 && (
+            <span>
+              Overdue: <strong className="confidence-low">{overdueCount}</strong>
+            </span>
+          )}
         </div>
       </div>
 
@@ -64,7 +74,16 @@ export default function RevisionQueuePanel() {
                 onChange={() => completeQueueItem(item.id)}
               />
               <span>{item.title}</span>
-              <small>{item.type}</small>
+              <small>
+                {item.type}
+                {item.type === "question" && item.star && (
+                  <>
+                    {" · "}
+                    {"⭐".repeat(item.star)} · Due{" "}
+                    {formatDueDate(item.nextRevisionAt)}
+                  </>
+                )}
+              </small>
             </label>
             <div className="revision-queue-actions">
               {!item.completed && (

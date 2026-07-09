@@ -12,8 +12,15 @@ import type { AppData, QuizResult, RevisionQueueItem } from "../lib/types";
 import { defaultAppData } from "../lib/seedData";
 import { supabase } from "../lib/supabase";
 import { isDemoMode } from "../lib/demoMode";
-import { buildRevisionQueueFromData, getMemoryScore } from "../lib/memoryEngine";
+import {
+  advanceStar,
+  buildRevisionQueueFromData,
+  computeNextRevisionDate,
+  getMemoryScore,
+  regressStar,
+} from "../lib/memoryEngine";
 import { fetchRealMemoryData } from "../services/memoryDataService";
+import { recordRevisionOutcome } from "../services/revisionService";
 
 // Local-only fields (see MEMORY.md audit: no backing Supabase tables yet).
 // questions/patterns are never persisted here - Demo Mode always uses the
@@ -96,7 +103,6 @@ type MemoryContextValue = {
   reviewAgainQueueItem: (id: string) => void;
   addQuizResult: (result: Omit<QuizResult, "id">) => void;
   advanceDailyChallenge: () => void;
-  markQuestionRevised: (questionId: string) => void;
   memoryScore: number;
 };
 
@@ -177,20 +183,116 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
     []
   );
 
-  const completeQueueItem = useCallback(
-    (id: string) => updateQueueItem(id, { completed: true }),
-    [updateQueueItem]
-  );
-
   const skipQueueItem = useCallback(
     (id: string) => updateQueueItem(id, { skipped: true }),
     [updateQueueItem]
   );
 
+  // Successful recall advances the question's revision star (max 5) and
+  // reschedules it further out; a forgotten review regresses the star
+  // (min 1) and reschedules it sooner - a Leitner-style spaced repetition
+  // system (see memoryEngine's STAR_INTERVAL_DAYS). Pattern/reflection
+  // queue items have no single underlying question, so they only update
+  // their own completed/reviewAgain flag. Demo Mode never calls Supabase -
+  // only the local question/queue state is updated there.
+  const applyRevisionOutcome = useCallback(
+    (queueItemId: string, recalled: boolean) => {
+      setData((prev) => {
+        const queueItem = prev.revisionQueue.find(
+          (i) => i.id === queueItemId
+        );
+        const questionId = queueItem?.questionId;
+
+        if (!questionId) {
+          const next: AppData = {
+            ...prev,
+            revisionQueue: prev.revisionQueue.map((item) =>
+              item.id === queueItemId
+                ? recalled
+                  ? { ...item, completed: true, reviewAgain: false }
+                  : { ...item, reviewAgain: true, completed: false }
+                : item
+            ),
+          };
+          persist(next);
+          return next;
+        }
+
+        const question = prev.questions.find((q) => q.id === questionId);
+        const currentStar = question?.revisionStar ?? 1;
+        const newStar = recalled
+          ? advanceStar(currentStar)
+          : regressStar(currentStar);
+        const nextRevisionAt = computeNextRevisionDate(newStar);
+        const nowIso = new Date().toISOString();
+
+        const next: AppData = {
+          ...prev,
+          questions: prev.questions.map((q) =>
+            q.id === questionId
+              ? {
+                  ...q,
+                  revisionStar: newStar,
+                  nextRevisionAt,
+                  lastRevisedAt: nowIso,
+                }
+              : q
+          ),
+          revisionQueue: prev.revisionQueue.map((item) =>
+            item.id === queueItemId
+              ? recalled
+                ? {
+                    ...item,
+                    completed: true,
+                    reviewAgain: false,
+                    star: newStar,
+                    nextRevisionAt,
+                  }
+                : {
+                    ...item,
+                    reviewAgain: true,
+                    completed: false,
+                    star: newStar,
+                    nextRevisionAt,
+                  }
+              : item
+          ),
+          activities: [
+            {
+              id: `act-rev-${Date.now()}`,
+              type: "revision-completed" as const,
+              text: recalled ? "Revision Completed" : "Marked for Review",
+              highlight: question?.name ?? queueItem?.title ?? "",
+              date: nowIso,
+            },
+            ...prev.activities,
+          ],
+        };
+
+        persist(next);
+
+        if (!isDemoMode()) {
+          recordRevisionOutcome(questionId, currentStar, recalled).catch(
+            (err) => {
+              console.error("Failed to persist revision outcome:", err);
+            }
+          );
+        }
+
+        return next;
+      });
+    },
+    [persist]
+  );
+
+  const completeQueueItem = useCallback(
+    (id: string) => applyRevisionOutcome(id, true),
+    [applyRevisionOutcome]
+  );
+
   const reviewAgainQueueItem = useCallback(
-    (id: string) =>
-      updateQueueItem(id, { reviewAgain: true, completed: false }),
-    [updateQueueItem]
+    (id: string) => applyRevisionOutcome(id, false),
+    [applyRevisionOutcome]
   );
 
   const addQuizResult = useCallback(
@@ -239,32 +341,6 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const markQuestionRevised = useCallback((questionId: string) => {
-    setData((prev) => {
-      const next = {
-        ...prev,
-        questions: prev.questions.map((q) =>
-          q.id === questionId
-            ? { ...q, lastRevisedAt: new Date().toISOString() }
-            : q
-        ),
-        activities: [
-          {
-            id: `act-rev-${Date.now()}`,
-            type: "revision-completed" as const,
-            text: "Revision Completed",
-            highlight:
-              prev.questions.find((q) => q.id === questionId)?.name ?? "",
-            date: new Date().toISOString(),
-          },
-          ...prev.activities,
-        ],
-      };
-      persist(next);
-      return next;
-    });
-  }, []);
-
   const memoryScore = useMemo(() => getMemoryScore(data), [data]);
 
   const value = useMemo(
@@ -276,7 +352,6 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
       reviewAgainQueueItem,
       addQuizResult,
       advanceDailyChallenge,
-      markQuestionRevised,
       memoryScore,
     }),
     [
@@ -287,7 +362,6 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
       reviewAgainQueueItem,
       addQuizResult,
       advanceDailyChallenge,
-      markQuestionRevised,
       memoryScore,
     ]
   );

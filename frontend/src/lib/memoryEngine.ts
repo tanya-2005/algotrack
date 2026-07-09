@@ -25,6 +25,27 @@ export function formatRelative(iso?: string): string {
   return `${days} days ago`;
 }
 
+// Calendar-day-aware phrasing for a future/near revision due date (as
+// opposed to formatRelative, which is for past events like solvedAt).
+// Buckets by calendar day rather than elapsed hours, so "due today" reads
+// correctly regardless of what time of day it currently is.
+export function formatDueDate(iso?: string, now: Date = new Date()): string {
+  if (!iso) return "now";
+  const todayStart = new Date(now);
+  todayStart.setHours(0, 0, 0, 0);
+  const dueStart = new Date(iso);
+  dueStart.setHours(0, 0, 0, 0);
+  const diffDays = Math.round(
+    (dueStart.getTime() - todayStart.getTime()) / MS_DAY
+  );
+
+  if (diffDays === 0) return "today";
+  if (diffDays === 1) return "tomorrow";
+  if (diffDays === -1) return "1 day overdue";
+  if (diffDays < -1) return `${Math.abs(diffDays)} days overdue`;
+  return `in ${diffDays} days`;
+}
+
 export function getQuestionStatus(q: Question): QuestionStatus {
   const sinceRevision = daysSince(q.lastRevisedAt ?? q.solvedAt);
   if (q.confidence >= 4 && sinceRevision <= 14) return "mastered";
@@ -303,32 +324,90 @@ export function getImprovingPatterns(data: AppData): string[] {
     .slice(0, 3);
 }
 
-export function shouldShowQuickRecall(): boolean {
-  const key = "dsa-quick-recall-last";
-  const last = localStorage.getItem(key);
-  const now = Date.now();
-  if (!last || now - Number(last) > 3600000) {
-    localStorage.setItem(key, String(now));
-    return Math.random() > 0.4;
-  }
-  return false;
+// Leitner-style spaced repetition: each star (1-5) maps to a fixed review
+// interval. Successful recall advances the star (max 5); a forgotten
+// review regresses it (min 1). See supabase/migrations for the matching
+// revision_star/last_revised_at/next_revision_at columns.
+export const STAR_INTERVAL_DAYS: Record<number, number> = {
+  1: 1,
+  2: 3,
+  3: 7,
+  4: 15,
+  5: 30,
+};
+
+export function getStarInterval(star: number): number {
+  const clamped = Math.min(Math.max(Math.round(star || 1), 1), 5);
+  return STAR_INTERVAL_DAYS[clamped];
 }
 
-export function getQuickRecallQuestion(data: AppData): Question | null {
-  const candidates = data.questions.filter(
-    (q) => daysSince(q.lastRevisedAt ?? q.solvedAt) >= 5
-  );
-  if (candidates.length === 0) return data.questions[0] ?? null;
-  return candidates[Math.floor(Math.random() * candidates.length)];
+export function computeNextRevisionDate(
+  star: number,
+  from: Date = new Date()
+): string {
+  const days = getStarInterval(star);
+  return new Date(from.getTime() + days * MS_DAY).toISOString();
+}
+
+export function advanceStar(star?: number): number {
+  return Math.min((star ?? 1) + 1, 5);
+}
+
+export function regressStar(star?: number): number {
+  return Math.max((star ?? 1) - 1, 1);
+}
+
+export type RevisionUrgency = "overdue" | "due-today" | "upcoming";
+
+export function getRevisionUrgency(
+  question: Question,
+  now: Date = new Date()
+): RevisionUrgency {
+  const todayStart = new Date(now);
+  todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date(todayStart.getTime() + MS_DAY);
+
+  // No scheduling data yet (e.g. Demo Mode fallback) - treat as due now.
+  if (!question.nextRevisionAt) return "due-today";
+
+  const due = new Date(question.nextRevisionAt);
+  if (due < todayStart) return "overdue";
+  if (due < todayEnd) return "due-today";
+  return "upcoming";
+}
+
+export function getOverdueQuestions(questions: Question[]): Question[] {
+  return questions.filter((q) => getRevisionUrgency(q) === "overdue");
+}
+
+export function getDueTodayQuestions(questions: Question[]): Question[] {
+  return questions.filter((q) => getRevisionUrgency(q) === "due-today");
+}
+
+export function getUpcomingQuestions(questions: Question[]): Question[] {
+  return questions.filter((q) => getRevisionUrgency(q) === "upcoming");
 }
 
 export function buildRevisionQueueFromData(
   questions: Question[],
   patterns: PatternData[]
 ): RevisionQueueItem[] {
+  const urgencyRank: Record<RevisionUrgency, number> = {
+    overdue: 0,
+    "due-today": 1,
+    upcoming: 2,
+  };
+
   const dueQuestions = questions
-    .filter((q) => getQuestionStatus(q) !== "mastered")
-    .sort((a, b) => computeRetention(a) - computeRetention(b))
+    .filter((q) => getRevisionUrgency(q) !== "upcoming")
+    .sort((a, b) => {
+      const rankDiff =
+        urgencyRank[getRevisionUrgency(a)] - urgencyRank[getRevisionUrgency(b)];
+      if (rankDiff !== 0) return rankDiff;
+      const aTime = a.nextRevisionAt ? new Date(a.nextRevisionAt).getTime() : 0;
+      const bTime = b.nextRevisionAt ? new Date(b.nextRevisionAt).getTime() : 0;
+      return aTime - bTime;
+    })
     .slice(0, 5)
     .map((q) => ({
       id: `rq-q-${q.id}`,
@@ -337,6 +416,9 @@ export function buildRevisionQueueFromData(
       completed: false,
       skipped: false,
       reviewAgain: false,
+      questionId: q.id,
+      star: q.revisionStar ?? 1,
+      nextRevisionAt: q.nextRevisionAt,
     }));
 
   const duePatterns = patterns
@@ -470,16 +552,21 @@ export function getRevisionForecast(data: AppData): {
   tomorrow: number;
   thisWeek: number;
 } {
-  const today = data.questions.filter(
-    (q) => getQuestionStatus(q) !== "mastered"
-  ).length;
-  const tomorrow = data.questions.filter(
-    (q) => predictRetention(q, 3) < 60
-  ).length;
-  const thisWeek = data.questions.filter(
-    (q) => predictRetention(q, 7) < 60
-  ).length;
-  return { today, tomorrow, thisWeek };
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
+  const dueWithin = (days: number) =>
+    data.questions.filter((q) => {
+      if (!q.nextRevisionAt) return true;
+      const due = new Date(q.nextRevisionAt).getTime();
+      return due < startOfToday.getTime() + days * MS_DAY;
+    }).length;
+
+  return {
+    today: dueWithin(1),
+    tomorrow: dueWithin(2),
+    thisWeek: dueWithin(7),
+  };
 }
 
 export function getRevisionRecommendationItems(data: AppData): {

@@ -50,11 +50,10 @@ function mapRowToQuestion(row: any): Question {
     // closest real analogue ("what clicked / what to remember").
     insights: row.reflection ? [row.reflection] : [],
     solvedAt: row.created_at,
-    // No revision-tracking column exists yet, so this stays undefined.
-    // memoryEngine already falls back to solvedAt wherever lastRevisedAt
-    // is missing (see daysSince(q.lastRevisedAt ?? q.solvedAt) usages).
-    lastRevisedAt: undefined,
+    lastRevisedAt: row.last_revised_at ?? undefined,
     timeTaken: estimateMinutes(row.time_taken),
+    revisionStar: row.revision_star ?? 1,
+    nextRevisionAt: row.next_revision_at ?? undefined,
   };
 }
 
