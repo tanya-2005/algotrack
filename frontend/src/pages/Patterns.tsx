@@ -2,9 +2,14 @@ import { supabase } from "../lib/supabase";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import type { PatternSort } from "../lib/types";
+import { useMemory } from "../context/MemoryContext";
+import { isDemoMode } from "../lib/demoMode";
+import { questionToRow } from "../lib/demoQuestionAdapter";
 import "../styles/patterns.css";
 
 function Patterns() {
+  const { data: memoryData } = useMemory();
+  const demoMode = isDemoMode();
   const [problems, setProblems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -12,8 +17,14 @@ function Patterns() {
     useState<PatternSort>("needs-revision");
 
   useEffect(() => {
+    if (demoMode) {
+      setProblems(memoryData.questions.map(questionToRow));
+      setLoading(false);
+      return;
+    }
+
     fetchProblems();
-  }, []);
+  }, [demoMode, memoryData.questions]);
 
   const fetchProblems = async () => {
     const {

@@ -11,11 +11,13 @@ import {
 import type { AppData, QuizResult, RevisionQueueItem } from "../lib/types";
 import { defaultAppData } from "../lib/seedData";
 import { supabase } from "../lib/supabase";
-import { isDemoMode } from "../lib/demoMode";
+import { DEMO_STORAGE_KEY, isDemoMode } from "../lib/demoMode";
+import { formPayloadToQuestion, type QuestionFormPayload } from "../lib/demoQuestionAdapter";
 import {
   advanceStar,
   buildRevisionQueueFromData,
   computeNextRevisionDate,
+  deriveDemoPatterns,
   getMemoryScore,
   regressStar,
 } from "../lib/memoryEngine";
@@ -23,14 +25,14 @@ import { fetchRealMemoryData } from "../services/memoryDataService";
 import { recordRevisionOutcome } from "../services/revisionService";
 
 // Local-only fields (see MEMORY.md audit: no backing Supabase tables yet).
-// questions/patterns are never persisted here - Demo Mode always uses the
-// fixed seed data, real accounts always refetch from Supabase.
+// Demo Mode additionally persists questions/patterns here (so add/edit/
+// delete survive navigation within a session); real accounts never do -
+// their questions/patterns always come fresh from Supabase.
 type LocalOnlyState = Pick<
   AppData,
   "activities" | "quizResults" | "dailyChallengeIndex" | "dailyChallengeDate"
 >;
 
-const DEMO_STORAGE_KEY = "dsa-memory-data:demo";
 const storageKeyForUser = (userId: string) => `dsa-memory-data:${userId}`;
 
 function emptyLocalOnlyState(): LocalOnlyState {
@@ -55,29 +57,38 @@ function loadLocalOnlyState(
   return fallback;
 }
 
-function persistLocalOnlyState(key: string, data: AppData) {
+function persistLocalOnlyState(key: string, data: AppData, isDemo: boolean) {
   const { activities, quizResults, dailyChallengeIndex, dailyChallengeDate } =
     data;
-  localStorage.setItem(
-    key,
-    JSON.stringify({
-      activities,
-      quizResults,
-      dailyChallengeIndex,
-      dailyChallengeDate,
-    })
-  );
+  const payload: Record<string, unknown> = {
+    activities,
+    quizResults,
+    dailyChallengeIndex,
+    dailyChallengeDate,
+  };
+  if (isDemo) {
+    payload.questions = data.questions;
+    payload.patterns = data.patterns;
+  }
+  localStorage.setItem(key, JSON.stringify(payload));
 }
 
 function initialAppData(): AppData {
   if (isDemoMode()) {
-    const local = loadLocalOnlyState(DEMO_STORAGE_KEY, {
-      activities: defaultAppData.activities,
-      quizResults: defaultAppData.quizResults,
-      dailyChallengeIndex: defaultAppData.dailyChallengeIndex,
-      dailyChallengeDate: defaultAppData.dailyChallengeDate,
-    });
-    return { ...defaultAppData, ...local };
+    let stored: Partial<AppData> = {};
+    try {
+      const raw = localStorage.getItem(DEMO_STORAGE_KEY);
+      if (raw) stored = JSON.parse(raw);
+    } catch {
+      /* use seed defaults */
+    }
+
+    return {
+      ...defaultAppData,
+      ...stored,
+      questions: stored.questions ?? defaultAppData.questions,
+      patterns: stored.patterns ?? defaultAppData.patterns,
+    };
   }
 
   // Real account (or auth still resolving): start empty rather than
@@ -103,6 +114,9 @@ type MemoryContextValue = {
   reviewAgainQueueItem: (id: string) => void;
   addQuizResult: (result: Omit<QuizResult, "id">) => void;
   advanceDailyChallenge: () => void;
+  addDemoQuestion: (payload: QuestionFormPayload) => void;
+  updateDemoQuestion: (id: string, payload: QuestionFormPayload) => void;
+  deleteDemoQuestion: (id: string) => void;
   memoryScore: number;
 };
 
@@ -120,7 +134,7 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
 
   const persist = useCallback((next: AppData) => {
     if (!storageKeyRef.current) return;
-    persistLocalOnlyState(storageKeyRef.current, next);
+    persistLocalOnlyState(storageKeyRef.current, next, isDemoMode());
   }, []);
 
   // For a logged-in user, load that specific account's own local state and
@@ -341,6 +355,72 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  // Demo Mode only - "Add/Edit/Delete Question" for a real account already
+  // goes straight to Supabase via ReflectionPanel and never touches this.
+  const addDemoQuestion = useCallback(
+    (payload: QuestionFormPayload) => {
+      setData((prev) => {
+        const newQuestion = formPayloadToQuestion(payload);
+        const questions = [newQuestion, ...prev.questions];
+        const next: AppData = {
+          ...prev,
+          questions,
+          patterns: deriveDemoPatterns(questions, prev.patterns),
+          activities: [
+            {
+              id: `act-add-${Date.now()}`,
+              type: "solved" as const,
+              text: "Solved",
+              highlight: newQuestion.name,
+              date: new Date().toISOString(),
+            },
+            ...prev.activities,
+          ],
+        };
+        persist(next);
+        return next;
+      });
+    },
+    [persist]
+  );
+
+  const updateDemoQuestion = useCallback(
+    (id: string, payload: QuestionFormPayload) => {
+      setData((prev) => {
+        const existing = prev.questions.find((q) => q.id === id);
+        const updated = formPayloadToQuestion(payload, existing);
+        const questions = prev.questions.map((q) => (q.id === id ? updated : q));
+        const next: AppData = {
+          ...prev,
+          questions,
+          patterns: deriveDemoPatterns(questions, prev.patterns),
+        };
+        persist(next);
+        return next;
+      });
+    },
+    [persist]
+  );
+
+  const deleteDemoQuestion = useCallback(
+    (id: string) => {
+      setData((prev) => {
+        const questions = prev.questions.filter((q) => q.id !== id);
+        const next: AppData = {
+          ...prev,
+          questions,
+          patterns: deriveDemoPatterns(questions, prev.patterns),
+          revisionQueue: prev.revisionQueue.filter(
+            (item) => item.questionId !== id
+          ),
+        };
+        persist(next);
+        return next;
+      });
+    },
+    [persist]
+  );
+
   const memoryScore = useMemo(() => getMemoryScore(data), [data]);
 
   const value = useMemo(
@@ -352,6 +432,9 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
       reviewAgainQueueItem,
       addQuizResult,
       advanceDailyChallenge,
+      addDemoQuestion,
+      updateDemoQuestion,
+      deleteDemoQuestion,
       memoryScore,
     }),
     [
@@ -362,6 +445,9 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
       reviewAgainQueueItem,
       addQuizResult,
       advanceDailyChallenge,
+      addDemoQuestion,
+      updateDemoQuestion,
+      deleteDemoQuestion,
       memoryScore,
     ]
   );

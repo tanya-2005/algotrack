@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import ReflectionPreview from "./ReflectionPreview";
 import ReflectionPanel from "./ReflectionPanel";
 import { getQuestions } from "../../services/questionservice";
+import { useMemory } from "../../context/MemoryContext";
+import { isDemoMode } from "../../lib/demoMode";
+import { questionToRow } from "../../lib/demoQuestionAdapter";
 
 type Props = {
   refreshKey: number;
@@ -14,6 +17,8 @@ function QuestionTable({
   search,
   difficultyFilter,
 }: Props) {
+  const { data: memoryData } = useMemory();
+  const demoMode = isDemoMode();
   const [questions, setQuestions] = useState<any[]>([]);
   const [selectedQuestion, setSelectedQuestion] =
     useState<any>(null);
@@ -23,11 +28,18 @@ function QuestionTable({
 
   useEffect(() => {
     mountedRef.current = true;
+
+    if (demoMode) {
+      setQuestions(memoryData.questions.map(questionToRow));
+      setLoading(false);
+      return;
+    }
+
     loadQuestions();
     return () => {
       mountedRef.current = false;
     };
-  }, [refreshKey]);
+  }, [refreshKey, demoMode, memoryData.questions]);
 
   async function loadQuestions(retryCount = 0) {
     try {
@@ -148,7 +160,12 @@ const matchesDifficulty =
 
       <ReflectionPanel
         question={selectedQuestion}
-        onSave={() => loadQuestions()}
+        onSave={async () => {
+          // In Demo Mode the useEffect above already reacts to
+          // memoryData.questions changing - re-fetching from Supabase here
+          // would just overwrite the table with an empty (no-session) result.
+          if (!demoMode) await loadQuestions();
+        }}
         onClose={() => setSelectedQuestion(null)}
       />
     </>

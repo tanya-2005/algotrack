@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowUp, Bot, UserRound } from "lucide-react";
 import { useMemory } from "../../context/MemoryContext";
+import { isDemoMode } from "../../lib/demoMode";
 import {
   getForgottenConcepts,
   getMemoryScore,
@@ -49,12 +50,14 @@ function buildCoachContext(data: ReturnType<typeof useMemory>["data"]) {
   };
 }
 
-// Used only if the AI call itself fails (e.g. an OpenRouter free-tier rate
-// limit) - keeps the coach usable and still grounded in the user's real
-// data instead of showing an error.
+// Used both as Demo Mode's coach (which never calls Supabase, so it never
+// even attempts the real AI) and as a fallback if the real AI call fails
+// for a logged-in user (e.g. an OpenRouter free-tier rate limit) - either
+// way it stays grounded in the current data instead of showing an error.
 function buildFallbackResponse(
   prompt: string,
-  data: ReturnType<typeof useMemory>["data"]
+  data: ReturnType<typeof useMemory>["data"],
+  demoMode: boolean
 ) {
   const lower = prompt.toLowerCase();
   const recommended = getRecommendedRevision(data);
@@ -74,7 +77,10 @@ function buildFallbackResponse(
   if (lower.includes("reflection") && latest) {
     return `Latest reflection (${latest.name}): "${latest.reflection}". You often forget: ${latest.mistakes.join("; ") || "—"}.`;
   }
-  return `Memory score: ${getMemoryScore(data)}%. Weakest: ${weakest}. Recommended today: ${recommended.pattern}. (The AI coach is momentarily busy — this is a quick offline summary of your real data.)`;
+  const closing = demoMode
+    ? "(This is Demo Mode - sign in to unlock the full AI coach grounded in your own questions.)"
+    : "(The AI coach is momentarily busy — this is a quick offline summary of your real data.)";
+  return `Memory score: ${getMemoryScore(data)}%. Weakest: ${weakest}. Recommended today: ${recommended.pattern}. ${closing}`;
 }
 
 export default function ChatWorkspace({ suggestedPrompt }: Props) {
@@ -107,16 +113,23 @@ export default function ChatWorkspace({ suggestedPrompt }: Props) {
     setDraft("");
     setIsTyping(true);
 
+    const demoMode = isDemoMode();
     let replyText: string;
-    try {
-      replyText = await sendCoachMessage(
-        userText,
-        history,
-        buildCoachContext(data)
-      );
-    } catch (err) {
-      console.error("AI Coach request failed, using offline fallback:", err);
-      replyText = buildFallbackResponse(userText, data);
+
+    if (demoMode) {
+      // Demo Mode never calls Supabase (including Edge Functions).
+      replyText = buildFallbackResponse(userText, data, true);
+    } else {
+      try {
+        replyText = await sendCoachMessage(
+          userText,
+          history,
+          buildCoachContext(data)
+        );
+      } catch (err) {
+        console.error("AI Coach request failed, using offline fallback:", err);
+        replyText = buildFallbackResponse(userText, data, false);
+      }
     }
 
     setMessages((prev) => [

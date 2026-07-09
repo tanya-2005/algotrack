@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
+import { useMemory } from "../context/MemoryContext";
+import { isDemoMode } from "../lib/demoMode";
+import { questionToRow } from "../lib/demoQuestionAdapter";
+import { buildDemoSummary } from "../lib/demoSummary";
 
 import PatternHero from "../components/patterns/PatternHero";
 import AIInsights from "../components/patterns/AIInsights";
@@ -17,6 +21,8 @@ import "../styles/patterns.css";
 
 function PDetails() {
   const location = useLocation();
+  const { data: memoryData } = useMemory();
+  const demoMode = isDemoMode();
 
   const patternName =
     (location.state as { patternName?: string } | null)?.patternName || "";
@@ -30,8 +36,19 @@ function PDetails() {
   const [userId, setUserId] = useState("");
 
   useEffect(() => {
+    if (demoMode) {
+      setQuestions(
+        memoryData.questions
+          .filter((q) => q.topic === patternName)
+          .map(questionToRow)
+      );
+      setSummary(null);
+      setLoading(false);
+      return;
+    }
+
     loadPage();
-  }, []);
+  }, [demoMode, memoryData.questions, patternName]);
 
   async function loadPage() {
     const {
@@ -39,7 +56,10 @@ function PDetails() {
     } = await supabase.auth.getSession();
     const user = session?.user;
 
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     setUserId(user.id);
 
@@ -65,6 +85,18 @@ function PDetails() {
   async function handleGenerateSummary() {
   try {
     setGenerating(true);
+
+    if (demoMode) {
+      // Demo Mode never calls Supabase (including Edge Functions) - show
+      // an instant local example in the same shape the real AI returns.
+      setSummary(
+        buildDemoSummary(
+          patternName,
+          memoryData.questions.filter((q) => q.topic === patternName)
+        )
+      );
+      return;
+    }
 
     const summary = await generatePatternSummary(
       patternName,

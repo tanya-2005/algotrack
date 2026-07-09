@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
+import { isDemoMode } from "../../lib/demoMode";
+import { useMemory } from "../../context/MemoryContext";
 
 type ReflectionPanelProps = {
   question: any;
@@ -72,6 +74,8 @@ export default function ReflectionPanel({
   );
 
   const [saving, setSaving] = useState(false);
+  const { addDemoQuestion, updateDemoQuestion, deleteDemoQuestion } =
+    useMemory();
 
   useEffect(() => {
     if (!question) return;
@@ -95,16 +99,6 @@ export default function ReflectionPanel({
     setSaving(true);
 
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const user = session?.user;
-
-      if (!user) {
-        alert("Please login first");
-        return;
-      }
-
       const payload = {
         title: questionName,
         difficulty,
@@ -115,6 +109,35 @@ export default function ReflectionPanel({
         memory_trigger: memoryTrigger,
         time_taken: timeTaken,
       };
+
+      // Demo Mode never calls Supabase - Add/Edit is a purely local update
+      // to the in-session demo dataset.
+      if (isDemoMode()) {
+        if (question.id && !question.isNew) {
+          updateDemoQuestion(question.id, payload);
+        } else {
+          addDemoQuestion(payload);
+        }
+
+        alert("Question Saved 🚀");
+
+        if (onSave) {
+          await onSave();
+        }
+
+        onClose();
+        return;
+      }
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const user = session?.user;
+
+      if (!user) {
+        alert("Please login first");
+        return;
+      }
 
       let error;
 
@@ -170,6 +193,18 @@ export default function ReflectionPanel({
     setSaving(true);
 
     try {
+      if (isDemoMode()) {
+        deleteDemoQuestion(question.id);
+        alert("Question Deleted 🗑️");
+
+        if (onSave) {
+          await onSave();
+        }
+
+        onClose();
+        return;
+      }
+
       const { error } = await supabase
         .from("problems")
         .delete()

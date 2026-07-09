@@ -388,6 +388,40 @@ export function getUpcomingQuestions(questions: Question[]): Question[] {
   return questions.filter((q) => getRevisionUrgency(q) === "upcoming");
 }
 
+// Recomputes pattern status/counts from the current question set after a
+// Demo Mode add/edit/delete, while preserving each existing pattern's
+// curated description/tags (matched by name) so those don't regress to a
+// generic auto-description. A brand-new topic (e.g. picked from
+// ReflectionPanel's fixed pattern list) gets a generic entry.
+export function deriveDemoPatterns(
+  questions: Question[],
+  existingPatterns: PatternData[]
+): PatternData[] {
+  const byName = new Map(existingPatterns.map((p) => [p.name, p]));
+  const groups = new Map<string, Question[]>();
+  questions.forEach((q) => {
+    const list = groups.get(q.topic) ?? [];
+    list.push(q);
+    groups.set(q.topic, list);
+  });
+
+  return Array.from(groups.entries()).map(([name, qs]) => {
+    const avg = qs.reduce((s, q) => s + q.confidence, 0) / qs.length;
+    const status: PatternData["status"] =
+      avg >= 4.5 ? "Strong" : avg <= 2.5 ? "Weak" : "Medium";
+    const existing = byName.get(name);
+    return {
+      id: existing?.id ?? name,
+      name,
+      description:
+        existing?.description ??
+        `${qs.length} solved question${qs.length === 1 ? "" : "s"} in this pattern.`,
+      tags: existing?.tags ?? [],
+      status,
+    };
+  });
+}
+
 export function buildRevisionQueueFromData(
   questions: Question[],
   patterns: PatternData[]

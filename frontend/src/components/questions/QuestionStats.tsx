@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { getQuestionStats } from "../../services/statsService";
+import { useMemory } from "../../context/MemoryContext";
+import { isDemoMode } from "../../lib/demoMode";
+import { getDueTodayQuestions, getOverdueQuestions } from "../../lib/memoryEngine";
 
 
 type Props = {
@@ -9,6 +12,8 @@ type Props = {
 function QuestionStats({
   refreshKey,
 }: Props) {
+  const { data: memoryData } = useMemory();
+  const demoMode = isDemoMode();
   const [stats, setStats] = useState({
     totalQuestions: 0,
     totalPatterns: 0,
@@ -19,11 +24,32 @@ function QuestionStats({
 
   useEffect(() => {
     mountedRef.current = true;
+
+    if (demoMode) {
+      const questions = memoryData.questions;
+      const totalPatterns = new Set(questions.map((q) => q.topic)).size;
+      const avgConfidence =
+        questions.length > 0
+          ? questions.reduce((sum, q) => sum + q.confidence, 0) / questions.length
+          : 0;
+      const dueToday =
+        getDueTodayQuestions(questions).length +
+        getOverdueQuestions(questions).length;
+
+      setStats({
+        totalQuestions: questions.length,
+        totalPatterns,
+        retention: Math.round((avgConfidence / 5) * 100),
+        dueToday,
+      });
+      return;
+    }
+
     loadStats();
     return () => {
       mountedRef.current = false;
     };
-  }, [refreshKey]);
+  }, [refreshKey, demoMode, memoryData.questions]);
 
   async function loadStats(retryCount = 0) {
     try {
