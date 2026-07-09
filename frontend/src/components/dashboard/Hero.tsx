@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { isDemoMode } from "../../lib/demoMode";
+import { getDisplayName } from "../../lib/userDisplay";
 
 type HeroProps = {
   onLogQuestion: () => void;
@@ -19,8 +20,7 @@ function Hero({ onLogQuestion }: HeroProps) {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!mounted) return;
-      const email = session?.user?.email;
-      setName(email ? email.split("@")[0] : "");
+      setName(getDisplayName(session));
     });
 
     return () => {

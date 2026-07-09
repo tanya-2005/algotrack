@@ -7,6 +7,7 @@ import { enableDemoMode } from "../lib/demoMode";
 export default function Login() {
   const navigate = useNavigate();
 
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -25,9 +26,15 @@ export default function Login() {
   };
 
   const handleSignup = async () => {
+    if (!name.trim()) {
+      alert("Enter your name first.");
+      return;
+    }
+
     const { error } = await signUp(
       email,
-      password
+      password,
+      name.trim()
     );
 
     if (error) {
@@ -64,6 +71,16 @@ export default function Login() {
         <p className="login-subtitle">
           Track. Reflect. Remember.
         </p>
+
+        <input
+          type="text"
+          placeholder="Name"
+          className="login-input"
+          value={name}
+          onChange={(e) =>
+            setName(e.target.value)
+          }
+        />
 
         <input
           type="email"

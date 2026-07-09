@@ -14,10 +14,12 @@ import { useTheme } from "../context/ThemeContext";
 import { supabase } from "../lib/supabase";
 import { disableDemoMode, isDemoMode } from "../lib/demoMode";
 import { signOut } from "../services/auth";
+import { getDisplayName } from "../lib/userDisplay";
 
 function Sidebar() {
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
+  const [name, setName] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
   const demoMode = isDemoMode();
 
@@ -27,11 +29,14 @@ function Sidebar() {
     let mounted = true;
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (mounted) setEmail(session?.user?.email ?? null);
+      if (!mounted) return;
+      setName(getDisplayName(session));
+      setEmail(session?.user?.email ?? null);
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
+        setName(getDisplayName(session));
         setEmail(session?.user?.email ?? null);
       }
     );
@@ -51,11 +56,11 @@ function Sidebar() {
     navigate("/");
   };
 
-  const displayName = demoMode ? "Demo User" : email ?? "Loading...";
+  const displayName = demoMode ? "Demo User" : name || "Loading...";
   const displaySubtext = demoMode ? "Exploring demo data" : email ?? "";
   const avatarLetter = demoMode
     ? "D"
-    : (email?.[0] ?? "?").toUpperCase();
+    : (displayName?.[0] ?? "?").toUpperCase();
 
   return (
     <aside className="sidebar">
