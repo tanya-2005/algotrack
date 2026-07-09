@@ -1,4 +1,6 @@
 import { supabase } from "../lib/supabase";
+import { getRevisionUrgency } from "../lib/memoryEngine";
+import { mapRowToQuestion } from "./memoryDataService";
 
 export async function getQuestionStats() {
   const {
@@ -42,9 +44,10 @@ export async function getQuestionStats() {
     (avgConfidence / 5) * 100
   );
 
-  const dueToday = questions.filter(
-    (q) => (q.confidence || 0) <= 2
-  ).length;
+  const dueToday = questions.filter((q) => {
+    const urgency = getRevisionUrgency(mapRowToQuestion(q));
+    return urgency === "overdue" || urgency === "due-today";
+  }).length;
 
   return {
     totalQuestions,

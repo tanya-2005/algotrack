@@ -35,7 +35,7 @@ function splitLines(raw: string | null): string[] {
     .filter(Boolean);
 }
 
-function mapRowToQuestion(row: any): Question {
+export function mapRowToQuestion(row: any): Question {
   return {
     id: String(row.id),
     name: row.title || "Untitled Question",

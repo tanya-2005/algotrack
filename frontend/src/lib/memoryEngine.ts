@@ -360,7 +360,7 @@ export function regressStar(star?: number): number {
 export type RevisionUrgency = "overdue" | "due-today" | "upcoming";
 
 export function getRevisionUrgency(
-  question: Question,
+  question: Pick<Question, "nextRevisionAt">,
   now: Date = new Date()
 ): RevisionUrgency {
   const todayStart = new Date(now);
