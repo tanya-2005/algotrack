@@ -23,3 +23,9 @@ export const signIn = async (
 export const signOut = async () => {
   return await supabase.auth.signOut();
 };
+
+export const resetPassword = async (email: string) => {
+  return await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/`,
+  });
+};

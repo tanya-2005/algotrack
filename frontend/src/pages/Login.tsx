@@ -1,7 +1,8 @@
 import "../styles/login.css";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { signIn, signUp } from "../services/auth";
+import { resetPassword, signIn, signUp } from "../services/auth";
+import { enableDemoMode } from "../lib/demoMode";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -37,6 +38,22 @@ export default function Login() {
     alert("Account Created!");
   };
 
+  const handleForgotPassword = async () => {
+    if (!email) {
+      alert("Enter your email above first, then click Forgot Password.");
+      return;
+    }
+
+    const { error } = await resetPassword(email);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    alert("Password reset email sent. Check your inbox.");
+  };
+
   return (
     <div className="login-page">
       <div className="login-card">
@@ -69,6 +86,14 @@ export default function Login() {
         />
 
         <button
+          type="button"
+          className="forgot-password-link"
+          onClick={handleForgotPassword}
+        >
+          Forgot Password?
+        </button>
+
+        <button
           className="login-btn"
           onClick={handleLogin}
         >
@@ -86,9 +111,10 @@ export default function Login() {
 
         <button
           className="demo-btn"
-          onClick={() =>
-            navigate("/dashboard")
-          }
+          onClick={() => {
+            enableDemoMode();
+            navigate("/dashboard");
+          }}
         >
           🚀 Explore Demo
         </button>

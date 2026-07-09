@@ -82,6 +82,32 @@
     0 0 15px rgba(99, 102, 241, 0.25);
 }
 
+.forgot-password-link {
+  display: block;
+
+  background: none;
+
+  border: none;
+
+  color: #94a3b8;
+
+  font-size: 13px;
+
+  text-align: right;
+
+  width: 100%;
+
+  margin-bottom: 8px;
+
+  cursor: pointer;
+
+  transition: color 0.2s;
+}
+
+.forgot-password-link:hover {
+  color: #a5b4fc;
+}
+
 .login-btn {
   width: 100%;
 

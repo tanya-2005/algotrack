@@ -1,4 +1,5 @@
-import { NavLink, Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { NavLink, Link, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Code2,
@@ -7,11 +8,54 @@ import {
   Bot,
   Moon,
   Sun,
+  LogOut,
 } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
+import { supabase } from "../lib/supabase";
+import { disableDemoMode, isDemoMode } from "../lib/demoMode";
+import { signOut } from "../services/auth";
 
 function Sidebar() {
   const { theme, setTheme } = useTheme();
+  const navigate = useNavigate();
+  const [email, setEmail] = useState<string | null>(null);
+  const demoMode = isDemoMode();
+
+  useEffect(() => {
+    if (demoMode) return;
+
+    let mounted = true;
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (mounted) setEmail(user?.email ?? null);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setEmail(session?.user?.email ?? null);
+      }
+    );
+
+    return () => {
+      mounted = false;
+      listener.subscription.unsubscribe();
+    };
+  }, [demoMode]);
+
+  const handleSignOut = async () => {
+    if (demoMode) {
+      disableDemoMode();
+    } else {
+      await signOut();
+    }
+    navigate("/");
+  };
+
+  const displayName = demoMode ? "Demo User" : email ?? "Loading...";
+  const displaySubtext = demoMode ? "Exploring demo data" : email ?? "";
+  const avatarLetter = demoMode
+    ? "D"
+    : (email?.[0] ?? "?").toUpperCase();
 
   return (
     <aside className="sidebar">
@@ -100,11 +144,19 @@ function Sidebar() {
         </div>
 
         <div className="profile">
-          <div className="avatar">T</div>
-          <div>
-            <h3>Tanya</h3>
-            <p>@tanya</p>
+          <div className="avatar">{avatarLetter}</div>
+          <div className="profile-info">
+            <h3>{displayName}</h3>
+            <p>{displaySubtext}</p>
           </div>
+          <button
+            type="button"
+            className="logout-btn"
+            title={demoMode ? "Exit Demo" : "Sign Out"}
+            onClick={handleSignOut}
+          >
+            <LogOut size={16} />
+          </button>
         </div>
       </div>
     </aside>

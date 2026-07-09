@@ -1,7 +1,10 @@
-import { Routes, Route, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 
 import Sidebar from "./layouts/Sidebar";
 import QuickRecall from "./components/common/QuickRecall";
+import { supabase } from "./lib/supabase";
+import { isDemoMode } from "./lib/demoMode";
 
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -13,9 +16,44 @@ import PDetails from "./pages/PDetails";
 
 function App() {
   const location = useLocation();
+  const [authChecked, setAuthChecked] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+      setIsAuthenticated(!!session);
+      setAuthChecked(true);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setIsAuthenticated(!!session);
+      }
+    );
+
+    return () => {
+      mounted = false;
+      listener.subscription.unsubscribe();
+    };
+  }, []);
 
   if (location.pathname === "/") {
     return <Login />;
+  }
+
+  // Demo Mode never creates a Supabase session, so it's allowed through
+  // without waiting on the auth check below.
+  if (!isDemoMode()) {
+    if (!authChecked) {
+      return null;
+    }
+
+    if (!isAuthenticated) {
+      return <Navigate to="/" replace />;
+    }
   }
 
   return (
