@@ -18,11 +18,6 @@ function Questions() {
   const [difficultyFilter, setDifficultyFilter] =
     useState("All");
 
-  console.log(
-    "PAGE REFRESH KEY:",
-    refreshKey
-  );
-
   return (
     <div className="questions-page">
       <QuestionHeader
@@ -57,10 +52,6 @@ function Questions() {
         <ReflectionPanel
           question={{ isNew: true }}
           onSave={async () => {
-            console.log(
-              "REFRESHING PAGE"
-            );
-
             setRefreshKey(
               (prev) => prev + 1
             );

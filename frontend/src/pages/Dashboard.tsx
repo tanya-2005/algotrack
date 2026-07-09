@@ -13,19 +13,6 @@ import RecentActivity from "../components/dashboard/RecentActivity";
 import ReflectionPanel from "../components/questions/ReflectionPanel";
 import "../styles/Questions.css";
 
-import { supabase } from "../lib/supabase";
-
-const testSupabase = async () => {
-  const { data, error } = await supabase.auth.getSession();
-
-  console.log("DATA:", data);
-  console.log("ERROR:", error);
-};
-
-<button onClick={testSupabase}>
-  Test Supabase
-</button>
-
 const emptyQuestion = {
   name: "",
   difficulty: "",

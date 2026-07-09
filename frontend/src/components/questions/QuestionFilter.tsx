@@ -10,20 +10,12 @@ type Props = {
 };
 
 function QuestionFilters(props: Props) {
-  console.log(props);
-
   const {
     search,
     setSearch,
     difficultyFilter,
     setDifficultyFilter,
   } = props;
-
-  console.log("CURRENT FILTER:", difficultyFilter);
-  console.log(
-    "setDifficultyFilter:",
-    setDifficultyFilter
-  );
 
   return (
     <div>

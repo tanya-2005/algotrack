@@ -23,19 +23,12 @@ function QuestionTable({
   async function loadQuestions() {
     try {
       const data = await getQuestions();
-
-      console.log("FRESH DATA:", data);
-
       setQuestions([...(data || [])]);
-      console.log("STATE UPDATED");
     } catch (error) {
       console.error(error);
     }
   }
-  console.log("TABLE QUESTIONS:", questions);
 
-
-  console.log("SEARCH PROP:", search);
   const filteredQuestions = questions.filter((q) => {
   const matchesSearch =
   q.title
@@ -54,14 +47,6 @@ const matchesDifficulty =
   );
 });
 
-console.log("FILTER:", difficultyFilter);
-console.log("FILTERED:", filteredQuestions);
-
-console.log("SEARCH:", search);
-console.log("FILTER:", difficultyFilter);
-console.log("QUESTIONS:", questions);
-console.log("FILTERED:", filteredQuestions);
-
   return (
     <>
       <div className="questions-table">
@@ -76,7 +61,6 @@ console.log("FILTERED:", filteredQuestions);
             className="question-row"
             key={q.id}
             onClick={() => {
-              console.log(q);
               setSelectedQuestion(q);
             }}
           >

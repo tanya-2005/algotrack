@@ -16,23 +16,14 @@ function QuestionStats({
     dueToday: 0,
   });
 
-  console.log("REFRESH KEY:", refreshKey);
   useEffect(() => {
     loadStats();
-    console.log("LOADING STATS");
   }, [refreshKey]);
 
   async function loadStats() {
-  const data =
-    await getQuestionStats();
-
-  console.log(
-    "STATS DATA:",
-    data
-  );
-
-  setStats(data);
-}
+    const data = await getQuestionStats();
+    setStats(data);
+  }
 
   return (
     <div className="question-stats">

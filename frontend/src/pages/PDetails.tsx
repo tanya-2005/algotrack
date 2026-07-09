@@ -3,12 +3,9 @@ import { useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 
 import PatternHero from "../components/patterns/PatternHero";
-//import PatternBlueprint from "../components/patterns/PatternBlueprint";
 import AIInsights from "../components/patterns/AIInsights";
 import PatternQuestions from "../components/patterns/PatternQuestions";
-//import CommonMistakes from "../components/patterns/CommonMistakes";
 import PatternNotes from "../components/patterns/PatternNotes";
-//import RevisionCenter from "../components/patterns/RevisionCenter";
 
 import {
   generatePatternSummary,

@@ -87,9 +87,6 @@ export default function ReflectionPanel({
   }, [question]);
 
   const handleSave = async () => {
-    console.log("QUESTION:", question);
-    console.log("IS NEW:", question.isNew);
-    console.log("ID:", question.id);
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -113,19 +110,13 @@ export default function ReflectionPanel({
     let error;
 
     if (question.id && !question.isNew) {
-
-      console.log("UPDATE RUNNING");
-      console.log("PAYLOAD:", payload);
       const result = await supabase
         .from("problems")
         .update(payload)
         .eq("id", question.id)
         .select();
 
-      console.log("UPDATE RESULT:", result);
-
       error = result.error;
-
     } else {
       const result = await supabase
         .from("problems")
@@ -137,8 +128,6 @@ export default function ReflectionPanel({
         ])
         .select();
 
-      console.log("INSERT RESULT:", result);
-
       error = result.error;
     }
 
@@ -148,23 +137,13 @@ export default function ReflectionPanel({
       return;
     }
 
-    console.log("SAVE SUCCESS");
-
     alert("Question Saved 🚀");
-
-    console.log("CALLING ONSAVE");
-
 
     if (onSave) {
       await onSave();
     }
 
-    console.log("ONSAVE FINISHED");
-
-
     onClose();
-
-
   };
 
   const handleDelete = async () => {
@@ -190,10 +169,6 @@ export default function ReflectionPanel({
     alert("Question Deleted 🗑️");
     onClose();
   };
-
-  console.log("RENDER QUESTION:", question);
-  console.log("RENDER ID:", question.id);
-  console.log("RENDER isNew:", isNew);
 
   return (
     <div
