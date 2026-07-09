@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getQuestionStats } from "../../services/statsService";
 
 
@@ -15,21 +15,30 @@ function QuestionStats({
     retention: 0,
     dueToday: 0,
   });
+  const mountedRef = useRef(true);
 
   useEffect(() => {
+    mountedRef.current = true;
     loadStats();
+    return () => {
+      mountedRef.current = false;
+    };
   }, [refreshKey]);
 
   async function loadStats(retryCount = 0) {
     try {
       const data = await getQuestionStats();
+      if (!mountedRef.current) return;
       setStats(data);
     } catch (error) {
       console.error(error);
+      if (!mountedRef.current) return;
       // One automatic retry covers a transient network hiccup (e.g. a
       // brief DNS/connection blip) without the user needing to refresh.
       if (retryCount < 1) {
-        setTimeout(() => loadStats(retryCount + 1), 800);
+        setTimeout(() => {
+          if (mountedRef.current) loadStats(retryCount + 1);
+        }, 800);
       }
     }
   }

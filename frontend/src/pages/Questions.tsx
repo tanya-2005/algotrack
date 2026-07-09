@@ -27,7 +27,6 @@ function Questions() {
       />
 
       <QuestionStats
-        key={refreshKey}
         refreshKey={refreshKey}
       />
 
@@ -41,7 +40,7 @@ function Questions() {
       />
 
       <QuestionTable
-        key={refreshKey}
+        refreshKey={refreshKey}
         search={search}
         difficultyFilter={
           difficultyFilter

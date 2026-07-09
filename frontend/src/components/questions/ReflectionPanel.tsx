@@ -72,6 +72,8 @@ export default function ReflectionPanel({
     question.title || ""
   );
 
+  const [saving, setSaving] = useState(false);
+
   const isNew = question.isNew === true;
   useEffect(() => {
     if (!question) return;
@@ -87,68 +89,75 @@ export default function ReflectionPanel({
   }, [question]);
 
   const handleSave = async () => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const user = session?.user;
+    if (saving) return;
+    setSaving(true);
 
-    if (!user) {
-      alert("Please login first");
-      return;
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const user = session?.user;
+
+      if (!user) {
+        alert("Please login first");
+        return;
+      }
+
+      const payload = {
+        title: questionName,
+        difficulty,
+        topic: pattern,
+        confidence,
+        reflection,
+        mistakes,
+        memory_trigger: memoryTrigger,
+        time_taken: timeTaken,
+      };
+
+      let error;
+
+      if (question.id && !question.isNew) {
+        const result = await supabase
+          .from("problems")
+          .update(payload)
+          .eq("id", question.id)
+          .select();
+
+        error = result.error;
+      } else {
+        const result = await supabase
+          .from("problems")
+          .insert([
+            {
+              user_id: user.id,
+              ...payload,
+            },
+          ])
+          .select();
+
+        error = result.error;
+      }
+
+      if (error) {
+        console.error(error);
+        alert(error.message);
+        return;
+      }
+
+      alert("Question Saved 🚀");
+
+      if (onSave) {
+        await onSave();
+      }
+
+      onClose();
+    } finally {
+      setSaving(false);
     }
-
-    const payload = {
-      title: questionName,
-      difficulty,
-      topic: pattern,
-      confidence,
-      reflection,
-      mistakes,
-      memory_trigger: memoryTrigger,
-      time_taken: timeTaken,
-    };
-
-    let error;
-
-    if (question.id && !question.isNew) {
-      const result = await supabase
-        .from("problems")
-        .update(payload)
-        .eq("id", question.id)
-        .select();
-
-      error = result.error;
-    } else {
-      const result = await supabase
-        .from("problems")
-        .insert([
-          {
-            user_id: user.id,
-            ...payload,
-          },
-        ])
-        .select();
-
-      error = result.error;
-    }
-
-    if (error) {
-      console.error(error);
-      alert(error.message);
-      return;
-    }
-
-    alert("Question Saved 🚀");
-
-    if (onSave) {
-      await onSave();
-    }
-
-    onClose();
   };
 
   const handleDelete = async () => {
-    if (!question.id) return;
+    if (!question.id || saving) return;
 
     const confirmed = window.confirm(
       "Delete this question?"
@@ -156,19 +165,30 @@ export default function ReflectionPanel({
 
     if (!confirmed) return;
 
-    const { error } = await supabase
-      .from("problems")
-      .delete()
-      .eq("id", question.id);
+    setSaving(true);
 
-    if (error) {
-      console.error(error);
-      alert(error.message);
-      return;
+    try {
+      const { error } = await supabase
+        .from("problems")
+        .delete()
+        .eq("id", question.id);
+
+      if (error) {
+        console.error(error);
+        alert(error.message);
+        return;
+      }
+
+      alert("Question Deleted 🗑️");
+
+      if (onSave) {
+        await onSave();
+      }
+
+      onClose();
+    } finally {
+      setSaving(false);
     }
-
-    alert("Question Deleted 🗑️");
-    onClose();
   };
 
   return (
@@ -205,8 +225,10 @@ export default function ReflectionPanel({
                   padding: "10px 20px",
                   border: "none",
                   borderRadius: "22px",
-                  cursor: "pointer",
+                  cursor: saving ? "not-allowed" : "pointer",
+                  opacity: saving ? 0.6 : 1,
                 }}
+                disabled={saving}
                 onClick={handleDelete}
               >
                 Delete
@@ -215,9 +237,14 @@ export default function ReflectionPanel({
 
             <button
               className="save-btn"
+              disabled={saving}
+              style={{
+                cursor: saving ? "not-allowed" : "pointer",
+                opacity: saving ? 0.6 : 1,
+              }}
               onClick={handleSave}
             >
-              Save
+              {saving ? "Saving..." : "Save"}
             </button>
           </div>
         </div>

@@ -1,14 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReflectionPreview from "./ReflectionPreview";
 import ReflectionPanel from "./ReflectionPanel";
 import { getQuestions } from "../../services/questionservice";
 
 type Props = {
+  refreshKey: number;
   search: string;
   difficultyFilter: string;
 };
 
 function QuestionTable({
+  refreshKey,
   search,
   difficultyFilter,
 }: Props) {
@@ -17,23 +19,32 @@ function QuestionTable({
     useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
+    mountedRef.current = true;
     loadQuestions();
-  }, []);
+    return () => {
+      mountedRef.current = false;
+    };
+  }, [refreshKey]);
 
   async function loadQuestions(retryCount = 0) {
     try {
       setLoadError(false);
       const data = await getQuestions();
+      if (!mountedRef.current) return;
       setQuestions([...(data || [])]);
       setLoading(false);
     } catch (error) {
       console.error(error);
+      if (!mountedRef.current) return;
       // One automatic retry covers a transient network hiccup (e.g. a
       // brief DNS/connection blip) without the user needing to refresh.
       if (retryCount < 1) {
-        setTimeout(() => loadQuestions(retryCount + 1), 800);
+        setTimeout(() => {
+          if (mountedRef.current) loadQuestions(retryCount + 1);
+        }, 800);
         return;
       }
       setLoadError(true);
@@ -41,7 +52,13 @@ function QuestionTable({
     }
   }
 
-  const filteredQuestions = questions.filter((q) => {
+  // Defensive: guarantee at most one row per question id, regardless of
+  // what the fetch returned, so a duplicate id can never render twice.
+  const uniqueQuestions = Array.from(
+    new Map(questions.map((q) => [q.id, q])).values()
+  );
+
+  const filteredQuestions = uniqueQuestions.filter((q) => {
   const matchesSearch =
   q.title
     ?.toLowerCase()
